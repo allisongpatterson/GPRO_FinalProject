@@ -122,7 +122,7 @@ class Thing (Root):
 class OlinStatue (Thing):
     def __init__ (self):
         Thing.__init__(self,"Olin statue","A statue of F. W. Olin")
-        rect = Rectangle(Point(1,1),Point(TILE_SIZE-1,TILE_SIZE-1))
+        rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
         rect.setFill("gray")
         rect.setOutline("gray")
         self._sprite = rect
@@ -165,8 +165,8 @@ class Rat (Character):
     def __init__ (self,name,desc):
         Character.__init__(self,name,desc)
         log("Rat.__init__ for "+str(self))
-        rect = Rectangle(Point(1,1),
-                         Point(TILE_SIZE-1,TILE_SIZE-1))
+        rect = Rectangle(Point(0,0),
+                         Point(TILE_SIZE,TILE_SIZE))
         rect.setFill("red")
         rect.setOutline("red")
         self._sprite = rect
@@ -214,9 +214,21 @@ class Player (Character):
     # something that does not happen for other characters
 
     def move (self,dx,dy):
-        # WRITE ME!
-        pass
+        tx = self._x + dx
+        ty = self._y + dy
 
+        moved = 0
+        if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
+            if self._screen._level._map[self._screen._level._pos(tx,ty)] != 2:
+                moved = 1
+                self._x = tx
+                self._y = ty
+                for key in self._screen._things:
+                    # Move screen opposite direction of player movement
+                    self._screen._things[key].move(-(dx*TILE_SIZE),-(dy*TILE_SIZE))
+
+        if moved:
+            self._screen._window.update()
 
 
 #############################################################
@@ -260,7 +272,10 @@ class Level (object):
     def tile (self,x,y):
         return self._map[self._pos(x,y)]
 
-
+    def ind_to_pos (self, ind):
+        x = ind % LEVEL_WIDTH
+        y = (ind - x) / LEVEL_WIDTH
+        return (x*TILE_SIZE,y*TILE_SIZE)
 
 #
 # A Screen is a representation of the level displayed in the 
@@ -283,34 +298,40 @@ class Screen (object):
         self._window = window
         self._cx = cx    # the initial center tile position 
         self._cy = cy    #  of the screen
-        self._things = []
-        # Background is black
-        bg = Rectangle(Point(-20,-20),Point(WINDOW_WIDTH+20,WINDOW_HEIGHT+20))
-        bg.setFill("black")
-        bg.setOutline("black")
+        self._things = {}
+        # Out-of-bounds is black
+        out = Rectangle(Point(-20,-20),Point(WINDOW_WIDTH+20,WINDOW_HEIGHT+20))
+        out.setFill("black")
+        out.setOutline("black")
+        out.draw(window)
+        # Background is lightgreen
+        bg = Rectangle(Point(0,0),Point(WINDOW_WIDTH-1,WINDOW_HEIGHT-1))
+        bg.setFill("lightgreen")
+        bg.setOutline("lightgreen")
         bg.draw(window)
         # here, you want to draw the tiles that are visible
         # and possible record them for future manipulation
         # you'll probably want to change this at some point to
         # get scrolling to work right...
-        dx = (VIEWPORT_WIDTH-1)/2
-        dy = (VIEWPORT_HEIGHT-1)/2
-        for y in range(cy-dy,cy+dy+1):
-            for x in range(cx-dx,cx+dx+1):
-                sx = (x-(cx-dx)) * TILE_SIZE
-                sy = (y-(cy-dy)) * TILE_SIZE
-                elt = Rectangle(Point(sx,sy),
-                                Point(sx+TILE_SIZE,sy+TILE_SIZE))
-                if self.tile(x,y) == 0:
-                    elt.setFill('lightgreen')
-                    elt.setOutline('lightgreen')
-                if self.tile(x,y) == 1:
+        dx = (cx - (VIEWPORT_WIDTH-1)/2) * TILE_SIZE
+        dy = (cy - (VIEWPORT_HEIGHT-1)/2) * TILE_SIZE
+
+        for ind,cell in enumerate(self._level._map):
+            if cell:
+                sx,sy = self._level.ind_to_pos(ind)
+
+                elt = Rectangle(Point(sx-dx,sy-dy),
+                                Point(sx-dx+TILE_SIZE,sy-dy+TILE_SIZE))
+
+                if cell == 1:
                     elt.setFill('green')
                     elt.setOutline('green')
-                elif self.tile(x,y) == 2:
+                elif cell == 2:
                     elt.setFill('sienna')
                     elt.setOutline('sienna')
                 elt.draw(window)
+
+                self._things[ind] = elt
 
     # return the tile at a given tile position
     def tile (self,x,y):

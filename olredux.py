@@ -82,6 +82,10 @@ class Thing (Root):
     def __str__ (self):
         return "<"+self.name()+">"
 
+    # shift sprite without changing Thing's position
+    def shift (self,dx,dy):
+        self.sprite().move(dx,dy)
+
     # return the sprite for display purposes
     def sprite (self):
         return self._sprite
@@ -147,7 +151,7 @@ class Character (Thing):
 
     def move (self,dx,dy):
         # WRITE ME!
-        pass   
+        pass
 
     def is_character (self):
         return True
@@ -217,18 +221,29 @@ class Player (Character):
         tx = self._x + dx
         ty = self._y + dy
 
-        moved = 0
-        if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
-            if self._screen._level._map[self._screen._level._pos(tx,ty)] != 2:
-                moved = 1
-                self._x = tx
-                self._y = ty
-                for key in self._screen._things:
-                    # Move screen opposite direction of player movement
-                    self._screen._things[key].move(-(dx*TILE_SIZE),-(dy*TILE_SIZE))
+        # Trying to go out of bounds?
+        if not (tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT):
+            return
 
-        if moved:
-            self._screen._window.update()
+        # Trying to walk through an unwalkable tile?
+        new_pos = self._screen._level._map[self._screen._level._pos(tx,ty)]
+        if new_pos in self._screen._unwalkables:
+            return
+
+        # Trying to walk through a Thing that is unwalkable?
+        for thing in self._screen._things:
+            if (thing.position() == (tx,ty)) and (not thing.is_walkable()):
+                return
+
+        # Update player location
+        self._x = tx
+        self._y = ty
+        
+        # Shift viewport opposite of direction player moves
+        self._screen.shift_viewport(-dx,-dy)
+        
+        # Update window so changes are visible
+        self._screen._window.update()
 
 
 #############################################################
@@ -258,12 +273,12 @@ class Player (Character):
 class Level (object):
     def __init__ (self):
         size = LEVEL_WIDTH * LEVEL_HEIGHT
-        map = [0] * size
+        the_map = [0] * size
         for i in range(100):
-            map[random.randrange(size)] = 1
+            the_map[random.randrange(size)] = 1
         for i in range(50):
-            map[random.randrange(size)] = 2
-        self._map = map
+            the_map[random.randrange(size)] = 2
+        self._map = the_map
 
     def _pos (self,x,y):
         return x + (y*LEVEL_WIDTH);
@@ -295,10 +310,12 @@ class Level (object):
 class Screen (object):
     def __init__ (self,level,window,cx,cy):
         self._level = level
+        self._unwalkables = [2]
         self._window = window
         self._cx = cx    # the initial center tile position 
         self._cy = cy    #  of the screen
-        self._things = {}
+        self._map_elts = {}
+        self._things = []
         # Out-of-bounds is black
         out = Rectangle(Point(-20,-20),Point(WINDOW_WIDTH+20,WINDOW_HEIGHT+20))
         out.setFill("black")
@@ -331,7 +348,7 @@ class Screen (object):
                     elt.setOutline('sienna')
                 elt.draw(window)
 
-                self._things[ind] = elt
+                self._map_elts[ind] = elt
 
     # return the tile at a given tile position
     def tile (self,x,y):
@@ -345,13 +362,24 @@ class Screen (object):
         item.sprite().draw(self._window)
         # WRITE ME!   You'll have to figure out how to manage these
         # because chances are when you scroll these will not move!
+        if not item.is_player():
+            self._things.append(item)
 
 
     # helper method to get at underlying window
     def window (self):
         return self._window
 
+    # shift viewport when player moves
+    def shift_viewport (self, dx, dy):
+        for key in self._map_elts:
+            # Move screen in the specified direction
+            self._map_elts[key].move(dx*TILE_SIZE,dy*TILE_SIZE)
+        for thing in self._things:
+            # Move Things as well so they appear to not move
+            thing.shift(dx*TILE_SIZE,dy*TILE_SIZE)
 
+   
 
 
 # A helper function that lets you log information to the console

@@ -10,6 +10,8 @@ import time
 import random
 from graphics import *
 
+# Print debugging logs?
+DEBUG = True
 
 # Tile size of the level
 LEVEL_WIDTH = 50
@@ -150,8 +152,33 @@ class Character (Thing):
     # to enable movement
 
     def move (self,dx,dy):
-        # WRITE ME!
-        pass
+        tx = self._x + dx
+        ty = self._y + dy
+
+        # Trying to go out of bounds?
+        if not (tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT):
+            return
+
+        # Trying to walk through an unwalkable tile?
+        new_pos = self._screen._level._map[self._screen._level._pos(tx,ty)]
+        if new_pos in self._screen._unwalkables:
+            return
+
+        # Trying to walk through a Thing that is unwalkable?
+        for thing in self._screen._things:
+            if (thing.position() == (tx,ty)) and (not thing.is_walkable()):
+                return
+
+        # Update character location
+        self._x = tx
+        self._y = ty
+        
+        # Shift sprite
+        self.shift(dx*TILE_SIZE,dy*TILE_SIZE)
+        
+        # Update window so changes are visible
+        self._screen._window.update()
+
 
     def is_character (self):
         return True
@@ -175,6 +202,7 @@ class Rat (Character):
         rect.setOutline("red")
         self._sprite = rect
         self._direction = random.randrange(4)
+        self._restlessness = 5
 
     # A helper method to register the Rat with the event queue
     # Call this method with a queue and a time delay before
@@ -191,10 +219,18 @@ class Rat (Character):
     # this gets called from event queue when the time is right
 
     def event (self,q):
-        # WRITE ME!
         log("event for "+str(self))
-        
-        
+
+        # Should I move this time?
+        if random.randrange(self._restlessness) == 0:
+            self.move_somewhere()   
+
+        # Re-register event with same frequency
+        self.register(q,self._freq)
+
+    def move_somewhere(self):
+        dx,dy = random.choice(MOVE.values())
+        self.move(dx,dy)
 
 
 #
@@ -362,8 +398,7 @@ class Screen (object):
         item.sprite().draw(self._window)
         # WRITE ME!   You'll have to figure out how to manage these
         # because chances are when you scroll these will not move!
-        if not item.is_player():
-            self._things.append(item)
+        self._things.append(item)
 
 
     # helper method to get at underlying window
@@ -377,7 +412,8 @@ class Screen (object):
             self._map_elts[key].move(dx*TILE_SIZE,dy*TILE_SIZE)
         for thing in self._things:
             # Move Things as well so they appear to not move
-            thing.shift(dx*TILE_SIZE,dy*TILE_SIZE)
+            if not thing.is_player():
+                thing.shift(dx*TILE_SIZE,dy*TILE_SIZE)
 
    
 
@@ -387,7 +423,8 @@ class Screen (object):
 # debug tricky event-based problems.
 #
 def log (message):
-    print time.strftime("[%H:%M:%S]",time.localtime()),message
+    if DEBUG:
+        print time.strftime("[%H:%M:%S]",time.localtime()),message
 
     
 
@@ -465,7 +502,7 @@ def create_panel (window):
     fg.draw(window)
     fg = Text(Point(WINDOW_WIDTH+100,
                     30),"Olinland Redux")
-    fg.setSize(24)
+    fg.setSize(20)
     fg.setStyle("italic")
     fg.setFill("red")
     fg.draw(window)

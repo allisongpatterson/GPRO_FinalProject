@@ -206,6 +206,10 @@ class Player (Character):
         log("Player.__init__ for "+str(self))
         pic = 't_android_red.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        config = {}
+        for option in options:
+            config[option] = DEFAULT_CONFIG[option]
+        self.config = config
 
     def is_player (self):
         return True

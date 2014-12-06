@@ -232,6 +232,48 @@ class Rat (Character):
         dx,dy = random.choice(MOVE.values())
         self.move(dx,dy)
 
+# class Arrow (Character):
+#     def __init__ (self,name,desc):
+#         Character.__init__(self,name,desc)
+#         log("Arrow.__init__ for "+str(self))
+#         pic = 'arrow.png'
+#         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+#         # config = {}
+#         # for option in options:
+#         #     config[option] = DEFAULT_CONFIG[option]
+#         # self.config = config
+
+        
+#         self._direction = random.randrange(4)
+#         self._restlessness = 5
+
+#     # A helper method to register the Rat with the event queue
+#     # Call this method with a queue and a time delay before
+#     # the event is called
+#     # Note that the method returns the object itself, so we can
+#     # use method chaining, which is cool (though not as cool as
+#     # bowties...)
+
+#     def register (self,q,freq):
+#         self._freq = freq
+#         q.enqueue(freq,self)
+#         return self
+
+#     # this gets called from event queue when the time is right
+
+#     def event (self,q):
+#         log("event for "+str(self))
+
+#         # Should I move this time?
+#         if random.randrange(self._restlessness) == 0:
+#             self.move_somewhere()   
+
+#         # Re-register event with same frequency
+#         self.register(q,self._freq)
+
+#     def move_somewhere(self):
+#         dx,dy = random.choice(MOVE.values())
+#         self.move(dx,dy)
 
 #
 # The Player character
@@ -240,8 +282,12 @@ class Player (Character):
     def __init__ (self,name):
         Character.__init__(self,name,"Yours truly")
         log("Player.__init__ for "+str(self))
-        pic = 't_android_red.gif'
-        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        self._pic = "arrow.png"
+
+        # pic = 't_android_red.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),self._pic)
+
+
         # config = {}
         # for option in options:
         #     config[option] = DEFAULT_CONFIG[option]
@@ -249,6 +295,12 @@ class Player (Character):
 
     def is_player (self):
         return True
+
+    def change(self):
+        if self._pic == "arrow.png":
+            self._pic = "arrow2.png"
+        self._sprite().draw(self._window)
+        # return self._sprite
 
     # The move() method of the Player is called when you 
     # press movement keys. 
@@ -490,7 +542,9 @@ class CheckInput (object):
             exit(0)
         if key in MOVE:
             (dx,dy) = MOVE[key]
+            self._player.change()
             self._player.move(dx,dy)
+            # self._player._sprite().draw(self._window)
         q.enqueue(1,self)
 
 
@@ -538,6 +592,7 @@ def main ():
     OlinStatue().materialize(scr,20,20)
     Rat("Pinky","A rat").register(q,40).materialize(scr,30,30)
     Rat("Brain","A rat with a big head").register(q,60).materialize(scr,10,30)
+    # Arrow("Arrow","An arrow").register(q,14).materialize(scr,30,30)
 
     create_panel(window)
 

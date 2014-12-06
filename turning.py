@@ -75,10 +75,11 @@ class Root (object):
 # assign it a specific sprite (see the OlinStatue below).
 # 
 class Thing (Root):
-    def __init__ (self,name,desc):
+    def __init__ (self,name,desc,direc):
         self._name = name
         self._description = desc
         self._sprite = Text(Point(TILE_SIZE/2,TILE_SIZE/2),"?")
+        self._direction = direc
         log("Thing.__init__ for "+str(self))
 
     def __str__ (self):
@@ -107,7 +108,7 @@ class Thing (Root):
     # creating a thing does not put it in play -- you have to 
     # call materialize, passing in the screen and the position
     # where you want it to appear
-    def materialize (self,screen,x,y):
+    def materialize (self,screen,x,y,direc):
         screen.add(self,x,y)
         self._screen = screen
         self._x = x
@@ -125,13 +126,13 @@ class Thing (Root):
 # Example of a kind of thing with its specific sprite
 # (here, a rather boring gray rectangle.)
 #
-class OlinStatue (Thing):
-    def __init__ (self):
-        Thing.__init__(self,"Olin statue","A statue of F. W. Olin")
-        rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
-        rect.setFill("gray")
-        rect.setOutline("gray")
-        self._sprite = rect
+# class OlinStatue (Thing):
+#     def __init__ (self):
+#         Thing.__init__(self,"Olin statue","A statue of F. W. Olin")
+#         rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
+#         rect.setFill("gray")
+#         rect.setOutline("gray")
+#         self._sprite = rect
 
 
 #
@@ -139,9 +140,10 @@ class OlinStatue (Thing):
 # about possibly proactively
 #
 class Character (Thing):
-    def __init__ (self,name,desc):
-        Thing.__init__(self,name,desc)
+    def __init__ (self,name,desc,direc):
+        Thing.__init__(self,name,desc,direc)
         log("Character.__init__ for "+str(self))
+        self._direction = None
         rect = Rectangle(Point(1,1),
                          Point(TILE_SIZE-1,TILE_SIZE-1))
         rect.setFill("red")
@@ -151,9 +153,26 @@ class Character (Thing):
     # A character has a move() method that you should implement
     # to enable movement
 
-    def move (self,dx,dy):
+    def is_facing(self,dx,dy,direc):
+        print 'howdy'
+
+    def turn_sprite():
+        pass
+
+    def move (self,dx,dy,curr_direc):
+        MOVE = {
+                (-1,0):'W',
+                (1,0):'E',
+                (0,-1):'N',
+                (0,1):'S'
+            }
+
         tx = self._x + dx
         ty = self._y + dy
+
+        new_direc = MOVE[dx,dy]
+        self.is_facing(dx,dy,new_direc)
+
 
         # Trying to go out of bounds?
         if not (tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT):
@@ -192,58 +211,15 @@ class Character (Thing):
 # the rat move, so that it can be queued into the event queue to enable
 # that behavior. (Which is right now unfortunately not implemented.)
 #
-class Rat (Character):
-    def __init__ (self,name,desc):
-        Character.__init__(self,name,desc)
-        log("Rat.__init__ for "+str(self))
-        rect = Rectangle(Point(0,0),
-                         Point(TILE_SIZE,TILE_SIZE))
-        rect.setFill("red")
-        rect.setOutline("red")
-        self._sprite = rect
-        self._direction = random.randrange(4)
-        self._restlessness = 5
-
-    # A helper method to register the Rat with the event queue
-    # Call this method with a queue and a time delay before
-    # the event is called
-    # Note that the method returns the object itself, so we can
-    # use method chaining, which is cool (though not as cool as
-    # bowties...)
-
-    def register (self,q,freq):
-        self._freq = freq
-        q.enqueue(freq,self)
-        return self
-
-    # this gets called from event queue when the time is right
-
-    def event (self,q):
-        log("event for "+str(self))
-
-        # Should I move this time?
-        if random.randrange(self._restlessness) == 0:
-            self.move_somewhere()   
-
-        # Re-register event with same frequency
-        self.register(q,self._freq)
-
-    def move_somewhere(self):
-        dx,dy = random.choice(MOVE.values())
-        self.move(dx,dy)
-
-# class Arrow (Character):
+# class Rat (Character):
 #     def __init__ (self,name,desc):
 #         Character.__init__(self,name,desc)
-#         log("Arrow.__init__ for "+str(self))
-#         pic = 'arrow.png'
-#         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
-#         # config = {}
-#         # for option in options:
-#         #     config[option] = DEFAULT_CONFIG[option]
-#         # self.config = config
-
-        
+#         log("Rat.__init__ for "+str(self))
+#         rect = Rectangle(Point(0,0),
+#                          Point(TILE_SIZE,TILE_SIZE))
+#         rect.setFill("red")
+#         rect.setOutline("red")
+#         self._sprite = rect
 #         self._direction = random.randrange(4)
 #         self._restlessness = 5
 
@@ -275,19 +251,16 @@ class Rat (Character):
 #         dx,dy = random.choice(MOVE.values())
 #         self.move(dx,dy)
 
-#
-# The Player character
-#
+
+# #
+# # The Player character
+# #
 class Player (Character):
-    def __init__ (self,name):
-        Character.__init__(self,name,"Yours truly")
+    def __init__ (self,name,direc):
+        Character.__init__(self,name,direc,"Yours truly")
         log("Player.__init__ for "+str(self))
-        self._pic = "arrow.png"
-
-        # pic = 't_android_red.gif'
-        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),self._pic)
-
-
+        pic = 't_android_red.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         # config = {}
         # for option in options:
         #     config[option] = DEFAULT_CONFIG[option]
@@ -295,12 +268,6 @@ class Player (Character):
 
     def is_player (self):
         return True
-
-    def change(self):
-        if self._pic == "arrow.png":
-            self._pic = "arrow2.png"
-        self._sprite().draw(self._window)
-        # return self._sprite
 
     # The move() method of the Player is called when you 
     # press movement keys. 
@@ -542,9 +509,7 @@ class CheckInput (object):
             exit(0)
         if key in MOVE:
             (dx,dy) = MOVE[key]
-            self._player.change()
             self._player.move(dx,dy)
-            # self._player._sprite().draw(self._window)
         q.enqueue(1,self)
 
 
@@ -589,14 +554,13 @@ def main ():
 
     q = EventQueue()
 
-    OlinStatue().materialize(scr,20,20)
-    Rat("Pinky","A rat").register(q,40).materialize(scr,30,30)
-    Rat("Brain","A rat with a big head").register(q,60).materialize(scr,10,30)
-    # Arrow("Arrow","An arrow").register(q,14).materialize(scr,30,30)
+    # OlinStatue().materialize(scr,20,20)
+    # Rat("Pinky","A rat").register(q,40).materialize(scr,30,30)
+    # Rat("Brain","A rat with a big head").register(q,60).materialize(scr,10,30)
 
     create_panel(window)
 
-    p = Player("...what's your name, bub?...").materialize(scr,25,25)
+    p = Player("...what's your name, bub?...",'N').materialize(scr,25,25,'N')
 
     q.enqueue(1,CheckInput(window,p))
 

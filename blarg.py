@@ -22,12 +22,9 @@ def get_input():
 		key = win.checkKey()
 		if key in MOVE:
 			pic = MOVE[key]
-			# erase_old()
+			erase_old()
+			draw_new(pic)
 			return pic
-			# Thingy._sprite = Image(Point(win_size/2,win_size/2),pic)
-			# return pic
-		# else:
-		# 	time.sleep(1)
 	else:
 		return None
 
@@ -54,23 +51,25 @@ def erase_old():
 	# SPRITE = draw_new()
 	if SPRITE:
 		SPRITE.undraw()
+		return True
 
 
 def main():
-	pic = get_input()
-	if pic != None:
-		# img_at_press = get_input()
-		# if img_at_press != '':
-		erase_old()
-		draw_new(pic)
+	get_input()
+	# pic = get_input()
+	# if pic != None:
+	# 	# img_at_press = get_input()
+	# 	# if img_at_press != '':
+	# erase_old()
+	# draw_new(pic)
 
 
 while True:
-	main()
+	get_input()
 	# time.sleep(1)
 # time.sleep(.5)
 	
-# win.getMouse()
+win.getMouse()
 
 
 

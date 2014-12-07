@@ -8,7 +8,7 @@
 
 import time
 import random
-from graphics import *
+from graphics import * 
 
 # Print debugging logs?
 DEBUG = True

@@ -64,6 +64,10 @@ class Root (object):
     def is_walkable (self):
         return False
 
+    # can this object be taken by the player?
+    def is_takable (self):
+        return False
+
 
 # A thing is something that can be interacted with and by default
 # is not moveable or walkable over
@@ -114,6 +118,10 @@ class Thing (Root):
         self._y = y
         return self
 
+    def dematerialize (self):
+        self._screen.delete(self)
+        return self
+
     def is_thing (self):
         return True
 
@@ -133,6 +141,8 @@ class OlinStatue (Thing):
         rect.setOutline("gray")
         self._sprite = rect
 
+    def is_takable (self):
+        return True
 
 #
 # Characters represent persons and animals and things that move
@@ -242,6 +252,8 @@ class Player (Character):
         log("Player.__init__ for "+str(self))
         pic = 't_android_red.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        self._inventory = []
+        self._facing = 'Up'
         # config = {}
         # for option in options:
         #     config[option] = DEFAULT_CONFIG[option]
@@ -284,6 +296,23 @@ class Player (Character):
         
         # Update window so changes are visible
         self._screen._window.update()
+
+
+    def take (self):
+        dx,dy = MOVE[self._facing]
+        tx = self._x + dx
+        ty = self._y + dy
+
+        # Can I take the thing I'm facing?
+        for thing in self._screen._things:
+            if (thing.position() == (tx,ty)) and (thing.is_takable()):
+                self._inventory.append(thing)
+                thing.dematerialize()
+                # TODO: display in sidepanel
+                break
+
+                
+
 
 
 #############################################################
@@ -357,22 +386,22 @@ class Screen (object):
         self._map_elts = {}
         self._things = []
         # Out-of-bounds is black
-        out = Rectangle(Point(-20,-20),Point(WINDOW_WIDTH+20,WINDOW_HEIGHT+20))
+        out = Rectangle(Point(0,0),Point(WINDOW_WIDTH,WINDOW_HEIGHT))
         out.setFill("black")
         out.setOutline("black")
         out.draw(window)
-        # Background is lightgreen
-        bg = Rectangle(Point(0,0),Point(WINDOW_WIDTH-1,WINDOW_HEIGHT-1))
-        bg.setFill("lightgreen")
-        bg.setOutline("lightgreen")
-        bg.draw(window)
-        # here, you want to draw the tiles that are visible
-        # and possible record them for future manipulation
-        # you'll probably want to change this at some point to
-        # get scrolling to work right...
+        
         dx = (cx - (VIEWPORT_WIDTH-1)/2) * TILE_SIZE
         dy = (cy - (VIEWPORT_HEIGHT-1)/2) * TILE_SIZE
 
+        # Background is lightgreen
+        bg = Rectangle(Point(-dx,-dy),Point(TILE_SIZE*(LEVEL_WIDTH)-dx,TILE_SIZE*(LEVEL_HEIGHT)-dy))
+        bg.setFill("lightgreen")
+        bg.setOutline("lightgreen")
+        bg.draw(window)
+        self._map_elts[-1] = bg
+
+        # Tiles
         for ind,cell in enumerate(self._level._map):
             if cell:
                 sx,sy = self._level.ind_to_pos(ind)
@@ -404,6 +433,9 @@ class Screen (object):
         # because chances are when you scroll these will not move!
         self._things.append(item)
 
+    def delete (self,item):
+        item.sprite().undraw()
+        self._things.remove(item)
 
     # helper method to get at underlying window
     def window (self):
@@ -475,7 +507,11 @@ MOVE = {
     'Left': (-1,0),
     'Right': (1,0),
     'Up' : (0,-1),
-    'Down' : (0,1)
+    'Down' : (0,1),
+    'a': (-1,0),
+    'd': (1,0),
+    'w' : (0,-1),
+    's' : (0,1)
 }
 
 class CheckInput (object):
@@ -491,6 +527,8 @@ class CheckInput (object):
         if key in MOVE:
             (dx,dy) = MOVE[key]
             self._player.move(dx,dy)
+        if key == 'e':
+            self._player.take()
         q.enqueue(1,self)
 
 

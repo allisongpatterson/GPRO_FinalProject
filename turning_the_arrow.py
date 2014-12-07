@@ -6,10 +6,10 @@ win_size = tile_size*5
 win = GraphWin("more_blarg",win_size,win_size,autoflush = False)
 
 MOVE = {
-    'Left': 'W_arrow.png',
-    'Right': 'E_arrow.png',
-    'Up' : 'N_arrow.png',
-    'Down' : 'S_arrow.png'
+    'Left': 'W_arrow.gif',
+    'Right': 'E_arrow.gif',
+    'Up' : 'N_arrow.gif',
+    'Down' : 'S_arrow.gif'
 }
 
 class Player (object):

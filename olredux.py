@@ -161,22 +161,22 @@ class Character (Thing):
     # A character has a move() method that you should implement
     # to enable movement
 
-    ###############################################################
+    # ###############################################################
 
-    def draw_initial (self):
-        # This x,y thing worked below, so I think it should work here?
-        x = self._x
-        y = self._y
-        pic = self._DIR_IMGS['Left'] # Not implemented yet, but should be defined per Character (like Rat._DIR_IMGS, Player._DIR_IMGS, etc.)
-        self._sprite = Image(Point(self._x,self._y),pic) # Currently rectangles vs. pictures, need to fix.
-        self._sprite.draw(self._window) # How to call window? Maybe self._screen._window from below?
+    # def draw_initial (self):
+    #     # This x,y thing worked below, so I think it should work here?
+    #     x = self._x
+    #     y = self._y
+    #     pic = self._DIR_IMGS['Left'] # Not implemented yet, but should be defined per Character (like Rat._DIR_IMGS, Player._DIR_IMGS, etc.)
+    #     self._sprite = Image(Point(self._x,self._y),pic) # Currently rectangles vs. pictures, need to fix.
+    #     self._sprite.draw(self._window) # How to call window? Maybe self._screen._window from below?
 
-    ###############################################################
+    # ###############################################################
 
-    def out_with_the_old(self):
-        self._sprite.undraw() # Don't know if this might need tweaking?
+    # def out_with_the_old(self):
+    #     self._sprite.undraw() # Don't know if this might need tweaking?
 
-    ###############################################################
+    # ###############################################################
 
     def move (self,dx,dy):
         tx = self._x + dx
@@ -207,15 +207,15 @@ class Character (Thing):
         # Update window so changes are visible
         self._screen._window.update()
 
-    ###############################################################
+    # ###############################################################
 
-    def in_with_the_new(self,key):
-        # Maybe integrate this whole thing into the move function?
-        pic = self._DIR_IMGS[key]
-        self._sprite = Image(Point(self._x,self._y),pic)
-        self._sprite.draw(self._window) # Again with the window call, see out_with_the_old.
+    # def in_with_the_new(self,key):
+    #     # Maybe integrate this whole thing into the move function?
+    #     pic = self._DIR_IMGS[key]
+    #     self._sprite = Image(Point(self._x,self._y),pic)
+    #     self._sprite.draw(self._window) # Again with the window call, see out_with_the_old.
 
-    ###############################################################
+    # ###############################################################
 
     def is_character (self):
         return True
@@ -595,13 +595,13 @@ class CheckInput (object):
             exit(0)
         if key in MOVE:
 
-    ###############################################################
+    # ###############################################################
 
-            # I'm sure these will have to be modified eventually.
-            self._player.out_with_the_old()
-            self._player.in_with_the_new(key)
+    #         # I'm sure these will have to be modified eventually.
+    #         self._player.out_with_the_old()
+    #         self._player.in_with_the_new(key)
 
-    ###############################################################
+    # ###############################################################
 
             (dx,dy) = MOVE[key]
             self._player.move(dx,dy)

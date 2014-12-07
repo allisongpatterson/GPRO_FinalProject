@@ -531,7 +531,6 @@ class CheckInput (object):
             self._player.take()
         q.enqueue(1,self)
 
-
 #
 # Create the right-side panel that can be used to display interesting
 # information to the player

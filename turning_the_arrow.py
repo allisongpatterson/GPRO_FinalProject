@@ -4,15 +4,12 @@ import time
 tile_size = 24
 win_size = tile_size*5
 win = GraphWin("more_blarg",win_size,win_size,autoflush = False)
-sprite = None # Image(Point(win_size/2,win_size/2),pic)
-pic = None
 
 MOVE = {
     'Left': 'W_arrow.png',
     'Right': 'E_arrow.png',
     'Up' : 'N_arrow.png',
     'Down' : 'S_arrow.png'
-    # '' : 't_android_red.gif'
 }
 
 class Player (object):
@@ -20,14 +17,17 @@ class Player (object):
 		self._name = name
 		self._window = window
 
+	# the very first image drawn, only referenced on startup
 	def draw_initial (self):
 		pic = MOVE['Left']
 		self._sprite = Image(Point(win_size/2,win_size/2),pic)
 		self._sprite.draw(self._window)
 
+	# undrawing the old guy to make room for the new guy
 	def out_with_the_old(self):
 		self._sprite.undraw()
 
+	# drawing said new guy
 	def in_with_the_new(self,key):
 		pic = MOVE[key]
 		self._sprite = Image(Point(win_size/2,win_size/2),pic)
@@ -71,14 +71,8 @@ class CheckInput (object):
             self._window.close()
             exit(0)
         if key in MOVE:
-        	print 'so far so good'
         	self._player.out_with_the_old()
-        	print "bam, he's gone"
         	self._player.in_with_the_new(key)
-            # (dx,dy) = MOVE[key]
-            # self._player.move(dx,dy)
-        if key == 'e':
-            self._player.take()
         q.enqueue(1,self)
 
 def main():

@@ -238,10 +238,12 @@ class Rat (Character):
         # Re-register event with same frequency
         self.register(q,self._freq)
 
-    def move_somewhere(self):
+    def move_somewhere (self):
         dx,dy = random.choice(MOVE.values())
         self.move(dx,dy)
 
+    def is_takable (self):
+        return True
 
 #
 # The Player character
@@ -253,6 +255,7 @@ class Player (Character):
         pic = 't_android_red.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         self._inventory = []
+        self._inventory_elts = {}
         self._facing = 'Up'
         # config = {}
         # for option in options:
@@ -297,6 +300,18 @@ class Player (Character):
         # Update window so changes are visible
         self._screen._window.update()
 
+    def facing_object (self):
+        dx,dy = MOVE[self._facing]
+        tx = self._x + dx
+        ty = self._y + dy
+
+        # Am I facing a Thing?
+        for thing in self._screen._things:
+            if (thing.position() == (tx,ty)):
+                return thing
+
+        return False
+
 
     def take (self):
         dx,dy = MOVE[self._facing]
@@ -304,14 +319,41 @@ class Player (Character):
         ty = self._y + dy
 
         # Can I take the thing I'm facing?
-        for thing in self._screen._things:
-            if (thing.position() == (tx,ty)) and (thing.is_takable()):
-                self._inventory.append(thing)
-                thing.dematerialize()
-                # TODO: display in sidepanel
-                break
+        thing = self.facing_object()
+        if thing and thing.is_takable():
+            inv_num = len(self._inventory)
+            self._inventory.append(thing)
+            thing.dematerialize()
 
-                
+            fg = Text(Point(WINDOW_WIDTH+100,90+25*inv_num),thing.name())
+            fg.setSize(16)
+            fg.setFill("white")
+            fg.draw(self._screen._window)
+            self._inventory_elts[inv_num] = fg
+
+
+    def examine (self):
+        dx,dy = MOVE[self._facing]
+        tx = self._x + dx
+        ty = self._y + dy
+
+        # Am I facing a Thing?
+        thing = self.facing_object()
+        if thing:
+            # Black box as a background
+            bg = Rectangle(Point(0,WINDOW_HEIGHT-50), Point(WINDOW_WIDTH,WINDOW_HEIGHT))
+            bg.setFill('black')
+            bg.draw(self._screen._window)
+            # Description
+            fg = Text(Point(WINDOW_WIDTH/2,WINDOW_HEIGHT-25),thing.description())
+            fg.setSize(16)
+            fg.setFill("white")
+            fg.draw(self._screen._window)
+            # Wait until a key is pressed, then undraw background and description
+            key = self._screen._window.getKey()
+            fg.undraw()
+            bg.undraw()
+
 
 
 
@@ -527,8 +569,10 @@ class CheckInput (object):
         if key in MOVE:
             (dx,dy) = MOVE[key]
             self._player.move(dx,dy)
-        if key == 'e':
+        if key == 'f':
             self._player.take()
+        if key == 'e':
+            self._player.examine()
         q.enqueue(1,self)
 
 
@@ -542,11 +586,20 @@ def create_panel (window):
     fg.setFill("darkgray")
     fg.setOutline("darkgray")
     fg.draw(window)
-    fg = Text(Point(WINDOW_WIDTH+100,
-                    30),"Olinland Redux")
+    fg = Text(Point(WINDOW_WIDTH+100,30),"Pizza Quest")
     fg.setSize(20)
     fg.setStyle("italic")
     fg.setFill("red")
+    fg.draw(window)
+
+    fg = Text(Point(WINDOW_WIDTH+100,60),'Inventory')
+    fg.setSize(16)
+    fg.setFill("white")
+    fg.draw(window)
+
+    fg = Text(Point(WINDOW_WIDTH+100,60),'________')
+    fg.setSize(16)
+    fg.setFill("white")
     fg.draw(window)
 
 

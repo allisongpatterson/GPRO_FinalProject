@@ -19,7 +19,7 @@ LEVEL_HEIGHT = 50
 
 # Tile size of the viewport (through which you view the level)
 VIEWPORT_WIDTH = 21
-VIEWPORT_HEIGHT = 21   
+VIEWPORT_HEIGHT = 21
 
 # Pixel size of a tile (which gives you the size of the window)
 TILE_SIZE = 24
@@ -279,11 +279,19 @@ class Player (Character):
     def __init__ (self,name):
         Character.__init__(self,name,"Yours truly")
         log("Player.__init__ for "+str(self))
-        pic = 't_android_red.gif'
+
+        self._DIR_IMGS = {
+            'Left': 'W_arrow.gif',
+            'Right': 'E_arrow.gif',
+            'Up' : 'N_arrow.gif',
+            'Down' : 'S_arrow.gif'
+        }
+        self._facing = 'Left'
+        pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        
         self._inventory = []
         self._inventory_elts = {}
-        self._facing = 'Up'
         # config = {}
         # for option in options:
         #     config[option] = DEFAULT_CONFIG[option]
@@ -299,9 +307,32 @@ class Player (Character):
     # In particular, when the Player move, the screen scrolls,
     # something that does not happen for other characters
 
+
+    #     pic = self._DIR_IMGS[key]
+    #     self._sprite = Image(Point(self._x,self._y),pic)
+    #     self._sprite.draw(self._window) # Again with the window call, see out_with_the_old.
+
     def move (self,dx,dy):
         tx = self._x + dx
         ty = self._y + dy
+
+        fdx,fdy = MOVE[self._facing]
+
+        if not (fdx == dx and fdy == dy):
+            key = DIRECTIONS[(dx,dy)]
+            print key
+            self._facing = key
+            self._sprite.undraw()
+            pic = self._DIR_IMGS[self._facing]
+            self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+            print (self._x-(self._screen._cx-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE
+            self._sprite.move((self._x-(self._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                               (self._y-(self._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+            self._sprite.draw(self._screen._window)
+
+            # Update window so changes are visible
+            self._screen._window.update()
+            return
 
         # Trying to go out of bounds?
         if not (tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT):
@@ -581,6 +612,13 @@ MOVE = {
     'd': (1,0),
     'w' : (0,-1),
     's' : (0,1)
+}
+
+DIRECTIONS = {
+    (-1,0): 'Left',
+    (1,0): 'Right',
+    (0,-1): 'Up',
+    (0,1): 'Down'
 }
 
 class CheckInput (object):

@@ -1,0 +1,13 @@
+TODO:
+
+1 level
+AI for llamas
+health system
+usable objects
+inventory selector
+pizza object
+progress indicator
+moar levelssssss
+
+check out the projectiles going over the right sidepanel
+changing projectiles to stop in front of things

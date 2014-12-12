@@ -205,10 +205,21 @@ class Projectile (Thing):
 class Fireball (Projectile):
     def __init__ (self, facing, mrange):
         Projectile.__init__(self, facing, mrange)
-        rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
-        rect.setFill("orange")
-        rect.setOutline("orange")
-        self._sprite = rect
+        self._facing = facing
+        # rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
+        # rect.setFill("orange")
+        # rect.setOutline("orange")
+        # self._sprite = rect
+
+        self._DIR_IMGS = {
+            'Left': 'W_fireball.gif',
+            'Right': 'E_fireball.gif',
+            'Up' : 'N_fireball.gif',
+            'Down' : 'S_fireball.gif'
+        }
+        # self._facing = 'Left'
+        pic = self._DIR_IMGS[self._facing]
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
 #
 # Example of a kind of thing with its specific sprite

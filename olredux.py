@@ -19,7 +19,7 @@ LEVEL_HEIGHT = 50
 
 # Tile size of the viewport (through which you view the level)
 VIEWPORT_WIDTH = 21
-VIEWPORT_HEIGHT = 21   
+VIEWPORT_HEIGHT = 21
 
 # Pixel size of a tile (which gives you the size of the window)
 TILE_SIZE = 24
@@ -68,6 +68,10 @@ class Root (object):
     def is_takable (self):
         return False
 
+    # can this object be set on fire?
+    def is_flammable (self):
+        return False
+
 
 # A thing is something that can be interacted with and by default
 # is not moveable or walkable over
@@ -111,8 +115,11 @@ class Thing (Root):
     # creating a thing does not put it in play -- you have to 
     # call materialize, passing in the screen and the position
     # where you want it to appear
-    def materialize (self,screen,x,y):
-        screen.add(self,x,y)
+    def materialize (self,screen,x,y,cx=False,cy=False):
+        if cx and cy:
+            screen.add(self,x,y,cx,cy)
+        else:
+            screen.add(self,x,y)
         self._screen = screen
         self._x = x
         self._y = y
@@ -128,6 +135,80 @@ class Thing (Root):
     def is_walkable (self):
         return False
 
+
+class Projectile (Thing):
+    def __init__ (self, facing, mrange):
+        Thing.__init__(self,'Projectile','A projectile')
+        self._dx, self._dy = MOVE[facing]
+        self._range = mrange
+
+
+    def register (self,q,freq):
+        self._freq = freq
+        q.enqueue(freq,self)
+        return self
+
+    def event (self,q):
+        log("event for "+str(self))
+        if self._range > 0:
+            self._range -= 1
+            done = self.move_or_stop()
+            if not done:
+                # Re-register event with same frequency
+                self.register(q,self._freq)
+        else:
+            self.stop()
+
+    def stop (self):
+        # Just stops projectile and undraws it
+        # If it needs to do more, overwrite this in a subclass
+        print 'stopping'
+        self._range = 0
+        self.dematerialize()
+
+    def move_or_stop (self):
+
+        # Reached the border?
+        if self._x in (0, LEVEL_WIDTH) or self._y in (0, LEVEL_HEIGHT):
+            print 'at border'
+            self.stop()
+            return True
+
+        # Reached an unwalkable tile?
+        if self._screen._level._map[self._screen._level._pos(self._x,self._y)] in self._screen._unwalkables:
+            print 'on unwalkable tile'
+            self.stop()
+            return True
+
+        # Reached an unwalkable Thing?
+        for thing in self._screen._things:
+            if (thing.position() == (self._x,self._y)) and (not thing.is_walkable()):
+                if not thing is self:
+                    print 'on unwalkable Thing'
+                    self.stop()
+                    return True
+
+        print 'moving'
+        # Else, move
+        self._x = self._x + self._dx
+        self._y = self._y + self._dy
+        
+        # Shift sprite
+        self.shift(self._dx*TILE_SIZE,self._dy*TILE_SIZE)
+        
+        # Update window so changes are visible
+        self._screen._window.update()
+
+        # Not done yet
+        return False
+
+class Fireball (Projectile):
+    def __init__ (self, facing, mrange):
+        Projectile.__init__(self, facing, mrange)
+        rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
+        rect.setFill("orange")
+        rect.setOutline("orange")
+        self._sprite = rect
 
 #
 # Example of a kind of thing with its specific sprite
@@ -161,23 +242,6 @@ class Character (Thing):
     # A character has a move() method that you should implement
     # to enable movement
 
-    # ###############################################################
-
-    # def draw_initial (self):
-    #     # This x,y thing worked below, so I think it should work here?
-    #     x = self._x
-    #     y = self._y
-    #     pic = self._DIR_IMGS['Left'] # Not implemented yet, but should be defined per Character (like Rat._DIR_IMGS, Player._DIR_IMGS, etc.)
-    #     self._sprite = Image(Point(self._x,self._y),pic) # Currently rectangles vs. pictures, need to fix.
-    #     self._sprite.draw(self._window) # How to call window? Maybe self._screen._window from below?
-
-    # ###############################################################
-
-    # def out_with_the_old(self):
-    #     self._sprite.undraw() # Don't know if this might need tweaking?
-
-    # ###############################################################
-
     def move (self,dx,dy):
         tx = self._x + dx
         ty = self._y + dy
@@ -206,16 +270,6 @@ class Character (Thing):
         
         # Update window so changes are visible
         self._screen._window.update()
-
-    # ###############################################################
-
-    # def in_with_the_new(self,key):
-    #     # Maybe integrate this whole thing into the move function?
-    #     pic = self._DIR_IMGS[key]
-    #     self._sprite = Image(Point(self._x,self._y),pic)
-    #     self._sprite.draw(self._window) # Again with the window call, see out_with_the_old.
-
-    # ###############################################################
 
     def is_character (self):
         return True
@@ -279,11 +333,22 @@ class Player (Character):
     def __init__ (self,name):
         Character.__init__(self,name,"Yours truly")
         log("Player.__init__ for "+str(self))
-        pic = 't_android_red.gif'
+
+        self._DIR_IMGS = {
+            'Left': 'W_arrow.gif',
+            'Right': 'E_arrow.gif',
+            'Up' : 'N_arrow.gif',
+            'Down' : 'S_arrow.gif'
+        }
+        self._facing = 'Left'
+        pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        
         self._inventory = []
         self._inventory_elts = {}
-        self._facing = 'Up'
+
+        self._fb_range = 5
+        self._fb_speed = 10
         # config = {}
         # for option in options:
         #     config[option] = DEFAULT_CONFIG[option]
@@ -292,16 +357,34 @@ class Player (Character):
     def is_player (self):
         return True
 
-    # The move() method of the Player is called when you 
-    # press movement keys. 
-    # It is different enough from movement by the other
-    # characters that you'll probably need to overwrite it.
-    # In particular, when the Player move, the screen scrolls,
-    # something that does not happen for other characters
+    def shoot (self):
+        dx,dy = MOVE[self._facing]
+        Fireball(
+            self._facing, self._fb_range).register(
+            self._screen._q, self._fb_speed).materialize(
+            self._screen, self._x+dx, self._y+dy, self._x, self._y
+        )
 
     def move (self,dx,dy):
         tx = self._x + dx
         ty = self._y + dy
+
+        fdx,fdy = MOVE[self._facing]
+
+        if not (fdx == dx and fdy == dy):
+            key = DIRECTIONS[(dx,dy)]
+            self._facing = key
+            self._sprite.undraw()
+            pic = self._DIR_IMGS[self._facing]
+            self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+            print (self._x-(self._screen._cx-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE
+            self._sprite.move((self._x-(self._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                               (self._y-(self._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+            self._sprite.draw(self._screen._window)
+
+            # Update window so changes are visible
+            self._screen._window.update()
+            return
 
         # Trying to go out of bounds?
         if not (tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT):
@@ -446,7 +529,8 @@ class Level (object):
 # Like, a lot of them.
 #
 class Screen (object):
-    def __init__ (self,level,window,cx,cy):
+    def __init__ (self,level,window,q,cx,cy):
+        self._q = q
         self._level = level
         self._unwalkables = [2]
         self._window = window
@@ -493,10 +577,13 @@ class Screen (object):
         return self._level.tile(x,y)
 
     # add a thing to the screen at a given position
-    def add (self,item,x,y):
+    def add (self,item,x,y,cx=False,cy=False):
+        if not cx or not cy:
+            cx = self._cx
+            cy = self._cy
         # first, move object into given position
-        item.sprite().move((x-(self._cx-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
-                           (y-(self._cy-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+        item.sprite().move((x-(cx-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                           (y-(cy-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
         item.sprite().draw(self._window)
         # WRITE ME!   You'll have to figure out how to manage these
         # because chances are when you scroll these will not move!
@@ -583,6 +670,13 @@ MOVE = {
     's' : (0,1)
 }
 
+DIRECTIONS = {
+    (-1,0): 'Left',
+    (1,0): 'Right',
+    (0,-1): 'Up',
+    (0,1): 'Down'
+}
+
 class CheckInput (object):
     def __init__ (self,window,player):
         self._player = player
@@ -590,25 +684,19 @@ class CheckInput (object):
 
     def event (self,q):
         key = self._window.checkKey()
+
         if key == 'q':
             self._window.close()
             exit(0)
         if key in MOVE:
-
-    # ###############################################################
-
-    #         # I'm sure these will have to be modified eventually.
-    #         self._player.out_with_the_old()
-    #         self._player.in_with_the_new(key)
-
-    # ###############################################################
-
             (dx,dy) = MOVE[key]
             self._player.move(dx,dy)
         if key == 'f':
             self._player.take()
         if key == 'e':
             self._player.examine()
+        if key == 'space':
+            self._player.shoot()
         q.enqueue(1,self)
 
 #
@@ -656,10 +744,11 @@ def main ():
     level = Level()
     log ("level created")
 
-    scr = Screen(level,window,25,25)
+    q = EventQueue()
+
+    scr = Screen(level,window,q,25,25)
     log ("screen created")
 
-    q = EventQueue()
 
     OlinStatue().materialize(scr,20,20)
     Rat("Pinky","A rat").register(q,40).materialize(scr,30,30)

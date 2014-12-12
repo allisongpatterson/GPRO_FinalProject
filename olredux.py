@@ -87,6 +87,8 @@ class Thing (Root):
         self._name = name
         self._description = desc
         self._walkable = False
+        self._takable = False
+        self._flammable = False
         self._burnt = False
         self._sprite = Text(Point(TILE_SIZE/2,TILE_SIZE/2),"?")
         log("Thing.__init__ for "+str(self))
@@ -113,6 +115,26 @@ class Thing (Root):
     # return the description
     def description (self):
         return self._description
+
+    def facing_object (self):
+        dx,dy = MOVE[self._facing]
+        tx = self._x + dx
+        ty = self._y + dy
+
+        # Am I facing a Thing?
+        for thing in self._screen._things:
+            if (thing.position() == (tx,ty)):
+                return thing
+
+        return False
+
+    def on_object (self):
+        # Am I on a Thing?
+        for thing in self._screen._things:
+            if (thing.position() == (self._x,self._y)):
+                return thing
+
+        return False
 
     # creating a thing does not put it in play -- you have to 
     # call materialize, passing in the screen and the position
@@ -143,7 +165,11 @@ class Thing (Root):
 
         # Change attributes
         self._walkable = True
+        self._flammable = False
+        self._takable = False
         self._burnt = True
+        self._name = "{}'s ashes".format(self._name)
+        self._description = 'what used to be {}'.format(self._description)
 
         # Pull player sprite to top
         p._sprite.canvas.tag_raise(p._sprite.id)
@@ -154,12 +180,19 @@ class Thing (Root):
     def is_walkable (self):
         return self._walkable
 
+    def is_takable (self):
+        return self._takable
+
+    def is_flammable (self):
+        return self._flammable
+
     def is_burnt (self):
         return self._burnt
 
 class Projectile (Thing):
     def __init__ (self, facing, mrange):
         Thing.__init__(self,'Projectile','A projectile')
+        self._facing = facing
         self._dx, self._dy = MOVE[facing]
         self._range = mrange
 
@@ -188,41 +221,46 @@ class Projectile (Thing):
         self.dematerialize()
 
     def move_or_stop (self):
+        def stop_now():
+            self.stop()
+            return True
 
         # Reached the border?
         if self._x == 0 and self._dx == -1:
             print 'at left border'
-            self.stop()
-            return True            
+            return stop_now()        
         if self._x == LEVEL_WIDTH-1 and self._dx == 1:
             print 'at right border'
-            self.stop()
-            return True
+            return stop_now()
         if self._y == 0 and self._dy == -1:
             print 'at top border'
-            self.stop()
-            return True
+            return stop_now()
         if self._y == LEVEL_HEIGHT-1 and self._dy == 1:
             print 'at bottom border'
-            self.stop()
-            return True
+            return stop_now()
 
         # Reached an unwalkable tile?
-        if self._screen._level._map[self._screen._level._pos(self._x,self._y)] in self._screen._unwalkables:
-            print 'on unwalkable tile'
-            self.stop()
-            return True
+        f_tile = self._screen._level._pos(self._x+self._dx,self._y+self._dy)
+        if self._screen._level._map[f_tile] in self._screen._unwalkables:
+            print 'at unwalkable tile'
+            return stop_now()
 
-        # Reached an unwalkable Thing?
-        for thing in self._screen._things:
-            if (thing.position() == (self._x,self._y)) and (not thing.is_walkable()):
-                if not thing is self:
-                    print 'on unwalkable Thing'
-                    self.stop()
-                    return True
 
-        print 'moving'
+        # Reached an unwalkable and unflammable Thing?
+        f_obj = self.facing_object()
+        if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
+            print 'at unwalkable, unflammable thing'
+            return stop_now()
+
+        # On a flammable Thing?
+        o_obj = self.on_object()
+        if o_obj and o_obj.is_flammable():
+            print 'on flammable thing'
+            return stop_now()
+
+
         # Else, move
+        print 'moving'
         self._x = self._x + self._dx
         self._y = self._y + self._dy
         
@@ -238,19 +276,13 @@ class Projectile (Thing):
 class Fireball (Projectile):
     def __init__ (self, facing, mrange):
         Projectile.__init__(self, facing, mrange)
-        self._facing = facing
-        # rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
-        # rect.setFill("orange")
-        # rect.setOutline("orange")
-        # self._sprite = rect
-
         self._DIR_IMGS = {
             'Left': 'W_fireball.gif',
             'Right': 'E_fireball.gif',
             'Up' : 'N_fireball.gif',
             'Down' : 'S_fireball.gif'
         }
-        # self._facing = 'Left'
+        self._facing = facing
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
@@ -258,10 +290,9 @@ class Fireball (Projectile):
         # Burn the thing if possible
         print 'stopping'
         self._range = 0
-        for thing in self._screen._things:
-            if (thing.position() == (self._x,self._y)) and (thing.is_flammable()):
-                thing.burn()
-                break
+        o_obj = self.on_object()
+        if o_obj and o_obj.is_flammable():
+            o_obj.burn()
 
         self.dematerialize()
 
@@ -273,14 +304,14 @@ class Fireball (Projectile):
 #
 class OlinStatue (Thing):
     def __init__ (self):
-        Thing.__init__(self,"Olin statue","A statue of F. W. Olin")
+        Thing.__init__(self,"Olin statue","a statue of F. W. Olin")
         rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
         rect.setFill("gray")
         rect.setOutline("gray")
         self._sprite = rect
+        self._takable = True
 
-    def is_takable (self):
-        return True
+
 
 #
 # Characters represent persons and animals and things that move
@@ -350,6 +381,8 @@ class Rat (Character):
         self._sprite = rect
         self._direction = random.randrange(4)
         self._restlessness = 5
+        self._flammable = True
+        self._takable = True
 
     # A helper method to register the Rat with the event queue
     # Call this method with a queue and a time delay before
@@ -380,11 +413,6 @@ class Rat (Character):
         dx,dy = random.choice(MOVE.values())
         self.move(dx,dy)
 
-    def is_takable (self):
-        return True
-
-    def is_flammable (self):
-        return True
 
 
 
@@ -420,13 +448,27 @@ class Player (Character):
         return True
 
     def shoot (self):
+        # Am I facing the border?
         dx,dy = MOVE[self._facing]
-        if self._x+dx >= 0 and self._x+dx <= LEVEL_WIDTH-1 and self._y+dy >= 0 and self._y+dy <= LEVEL_HEIGHT-1: 
-            Fireball(
-                self._facing, self._fb_range).register(
-                self._screen._q, self._fb_speed).materialize(
-                self._screen, self._x+dx, self._y+dy, self._x, self._y
-            )
+        if not (self._x+dx >= 0 and self._x+dx <= LEVEL_WIDTH-1 and self._y+dy >= 0 and self._y+dy <= LEVEL_HEIGHT-1):
+            return
+
+        # Am I facing an unwalkable tile? (All tiles are nonflammable at this point)
+        f_tile = self._screen._level._pos(self._x+dx,self._y+dy)
+        if self._screen._level._map[f_tile] in self._screen._unwalkables:
+            return 
+
+        # Am I facing a nonflammable object?
+        f_obj = self.facing_object()
+        if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
+            return
+
+        # Else, shoot fireball
+        Fireball(
+            self._facing, self._fb_range).register(
+            self._screen._q, self._fb_speed).materialize(
+            self._screen, self._x+dx, self._y+dy, self._x, self._y
+        )
 
     def move (self,dx,dy):
         tx = self._x + dx
@@ -473,17 +515,17 @@ class Player (Character):
         # Update window so changes are visible
         self._screen._window.update()
 
-    def facing_object (self):
-        dx,dy = MOVE[self._facing]
-        tx = self._x + dx
-        ty = self._y + dy
+    # def facing_object (self):
+    #     dx,dy = MOVE[self._facing]
+    #     tx = self._x + dx
+    #     ty = self._y + dy
 
-        # Am I facing a Thing?
-        for thing in self._screen._things:
-            if (thing.position() == (tx,ty)):
-                return thing
+    #     # Am I facing a Thing?
+    #     for thing in self._screen._things:
+    #         if (thing.position() == (tx,ty)):
+    #             return thing
 
-        return False
+    #     return False
 
 
     def take (self):
@@ -817,8 +859,8 @@ def main ():
 
 
     OlinStatue().materialize(scr,20,20)
-    Rat("Pinky","A rat").register(q,40).materialize(scr,30,30)
-    Rat("Brain","A rat with a big head").register(q,60).materialize(scr,10,30)
+    Rat("Pinky","a rat").register(q,40).materialize(scr,30,30)
+    Rat("Brain","a rat with a big head").register(q,60).materialize(scr,10,30)
 
     create_panel(window)
 

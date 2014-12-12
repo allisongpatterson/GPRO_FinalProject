@@ -10,4 +10,5 @@ progress indicator
 moar levelssssss
 
 check out the projectiles going over the right sidepanel
-changing projectiles to stop in front of things
+ash piles also go over the right sidepanel
+changing projectiles to stop in front of things -- done 12/12

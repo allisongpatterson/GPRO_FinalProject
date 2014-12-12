@@ -18,11 +18,11 @@ LEVEL_WIDTH = 50
 LEVEL_HEIGHT = 50
 
 # Tile size of the viewport (through which you view the level)
-VIEWPORT_WIDTH = 21
-VIEWPORT_HEIGHT = 21
+VIEWPORT_WIDTH = 15
+VIEWPORT_HEIGHT = 15
 
 # Pixel size of a tile (which gives you the size of the window)
-TILE_SIZE = 24
+TILE_SIZE = 48
 
 # Pixel size of the viewport
 WINDOW_WIDTH = TILE_SIZE * VIEWPORT_WIDTH
@@ -335,10 +335,10 @@ class Player (Character):
         log("Player.__init__ for "+str(self))
 
         self._DIR_IMGS = {
-            'Left': 'W_arrow.gif',
-            'Right': 'E_arrow.gif',
-            'Up' : 'N_arrow.gif',
-            'Down' : 'S_arrow.gif'
+            'Left': 'W_duck.gif',
+            'Right': 'E_duck.gif',
+            'Up' : 'N_duck.gif',
+            'Down' : 'S_duck.gif'
         }
         self._facing = 'Left'
         pic = self._DIR_IMGS[self._facing]

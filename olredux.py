@@ -86,6 +86,8 @@ class Thing (Root):
     def __init__ (self,name,desc):
         self._name = name
         self._description = desc
+        self._walkable = False
+        self._burnt = False
         self._sprite = Text(Point(TILE_SIZE/2,TILE_SIZE/2),"?")
         log("Thing.__init__ for "+str(self))
 
@@ -129,12 +131,31 @@ class Thing (Root):
         self._screen.delete(self)
         return self
 
+    def burn (self):
+        # Change sprite to ash pile
+        pic = 'ash.gif'
+        self._sprite.undraw()
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        p = self._screen._player
+        self._sprite.move((self._x-(p._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                           (self._y-(p._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+        self._sprite.draw(self._screen._window)
+
+        # Change attributes
+        self._walkable = True
+        self._burnt = True
+
+        # Pull player sprite to top
+        p._sprite.canvas.tag_raise(p._sprite.id)
+
     def is_thing (self):
         return True
 
     def is_walkable (self):
-        return False
+        return self._walkable
 
+    def is_burnt (self):
+        return self._burnt
 
 class Projectile (Thing):
     def __init__ (self, facing, mrange):
@@ -186,10 +207,6 @@ class Projectile (Thing):
             self.stop()
             return True
 
-        # if self._x in (0, LEVEL_WIDTH-1) or self._y in (0, LEVEL_HEIGHT-1):
-        #     self.stop()
-        #     return True
-
         # Reached an unwalkable tile?
         if self._screen._level._map[self._screen._level._pos(self._x,self._y)] in self._screen._unwalkables:
             print 'on unwalkable tile'
@@ -237,6 +254,19 @@ class Fireball (Projectile):
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
+    def stop (self):
+        # Burn the thing if possible
+        print 'stopping'
+        self._range = 0
+        for thing in self._screen._things:
+            if (thing.position() == (self._x,self._y)) and (thing.is_flammable()):
+                thing.burn()
+                break
+
+        self.dematerialize()
+
+
+
 #
 # Example of a kind of thing with its specific sprite
 # (here, a rather boring gray rectangle.)
@@ -259,6 +289,7 @@ class OlinStatue (Thing):
 class Character (Thing):
     def __init__ (self,name,desc):
         Thing.__init__(self,name,desc)
+        self._walkable = False
         log("Character.__init__ for "+str(self))
         rect = Rectangle(Point(1,1),
                          Point(TILE_SIZE-1,TILE_SIZE-1))
@@ -301,8 +332,6 @@ class Character (Thing):
     def is_character (self):
         return True
 
-    def is_walkable (self):
-        return False
 
 
 # 
@@ -339,12 +368,13 @@ class Rat (Character):
     def event (self,q):
         log("event for "+str(self))
 
-        # Should I move this time?
-        if random.randrange(self._restlessness) == 0:
-            self.move_somewhere()   
+        if not self.is_burnt():
+            # Should I move this time?
+            if random.randrange(self._restlessness) == 0:
+                self.move_somewhere()   
 
-        # Re-register event with same frequency
-        self.register(q,self._freq)
+            # Re-register event with same frequency if not a pile of ashes
+            self.register(q,self._freq)
 
     def move_somewhere (self):
         dx,dy = random.choice(MOVE.values())
@@ -352,6 +382,11 @@ class Rat (Character):
 
     def is_takable (self):
         return True
+
+    def is_flammable (self):
+        return True
+
+
 
 #
 # The Player character
@@ -374,7 +409,7 @@ class Player (Character):
         self._inventory = []
         self._inventory_elts = {}
 
-        self._fb_range = 5
+        self._fb_range = 3
         self._fb_speed = 10
         # config = {}
         # for option in options:
@@ -399,6 +434,7 @@ class Player (Character):
 
         fdx,fdy = MOVE[self._facing]
 
+        # Turn if not facing direction told to go
         if not (fdx == dx and fdy == dy):
             key = DIRECTIONS[(dx,dy)]
             self._facing = key
@@ -556,8 +592,9 @@ class Level (object):
 # Like, a lot of them.
 #
 class Screen (object):
-    def __init__ (self,level,window,q,cx,cy):
+    def __init__ (self,level,window,q,p,cx,cy):
         self._q = q
+        self._player = p
         self._level = level
         self._unwalkables = [2]
         self._window = window
@@ -773,7 +810,9 @@ def main ():
 
     q = EventQueue()
 
-    scr = Screen(level,window,q,25,25)
+    p = Player("...what's your name, bub?...")
+
+    scr = Screen(level,window,q,p,25,25)
     log ("screen created")
 
 
@@ -783,7 +822,7 @@ def main ():
 
     create_panel(window)
 
-    p = Player("...what's your name, bub?...").materialize(scr,25,25)
+    p.materialize(scr,25,25)
 
     q.enqueue(1,CheckInput(window,p))
 

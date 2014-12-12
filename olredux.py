@@ -115,8 +115,8 @@ class Thing (Root):
     # creating a thing does not put it in play -- you have to 
     # call materialize, passing in the screen and the position
     # where you want it to appear
-    def materialize (self,screen,x,y,cx=False,cy=False):
-        if cx and cy:
+    def materialize (self,screen,x,y,cx=-1,cy=-1):
+        if (cx != -1) and (cy != -1):
             screen.add(self,x,y,cx,cy)
         else:
             screen.add(self,x,y)
@@ -169,10 +169,26 @@ class Projectile (Thing):
     def move_or_stop (self):
 
         # Reached the border?
-        if self._x in (0, LEVEL_WIDTH) or self._y in (0, LEVEL_HEIGHT):
-            print 'at border'
+        if self._x == 0 and self._dx == -1:
+            print 'at left border'
+            self.stop()
+            return True            
+        if self._x == LEVEL_WIDTH-1 and self._dx == 1:
+            print 'at right border'
             self.stop()
             return True
+        if self._y == 0 and self._dy == -1:
+            print 'at top border'
+            self.stop()
+            return True
+        if self._y == LEVEL_HEIGHT-1 and self._dy == 1:
+            print 'at bottom border'
+            self.stop()
+            return True
+
+        # if self._x in (0, LEVEL_WIDTH-1) or self._y in (0, LEVEL_HEIGHT-1):
+        #     self.stop()
+        #     return True
 
         # Reached an unwalkable tile?
         if self._screen._level._map[self._screen._level._pos(self._x,self._y)] in self._screen._unwalkables:
@@ -206,8 +222,8 @@ class Fireball (Projectile):
     def __init__ (self, facing, mrange):
         Projectile.__init__(self, facing, mrange)
         rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
-        rect.setFill("orange")
-        rect.setOutline("orange")
+        rect.setFill('orange')
+        rect.setOutline('orange')
         self._sprite = rect
 
 #
@@ -359,11 +375,12 @@ class Player (Character):
 
     def shoot (self):
         dx,dy = MOVE[self._facing]
-        Fireball(
-            self._facing, self._fb_range).register(
-            self._screen._q, self._fb_speed).materialize(
-            self._screen, self._x+dx, self._y+dy, self._x, self._y
-        )
+        if self._x+dx >= 0 and self._x+dx <= LEVEL_WIDTH-1 and self._y+dy >= 0 and self._y+dy <= LEVEL_HEIGHT-1: 
+            Fireball(
+                self._facing, self._fb_range).register(
+                self._screen._q, self._fb_speed).materialize(
+                self._screen, self._x+dx, self._y+dy, self._x, self._y
+            )
 
     def move (self,dx,dy):
         tx = self._x + dx
@@ -377,7 +394,6 @@ class Player (Character):
             self._sprite.undraw()
             pic = self._DIR_IMGS[self._facing]
             self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
-            print (self._x-(self._screen._cx-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE
             self._sprite.move((self._x-(self._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
                                (self._y-(self._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
             self._sprite.draw(self._screen._window)
@@ -577,8 +593,8 @@ class Screen (object):
         return self._level.tile(x,y)
 
     # add a thing to the screen at a given position
-    def add (self,item,x,y,cx=False,cy=False):
-        if not cx or not cy:
+    def add (self,item,x,y,cx=-1,cy=-1):
+        if (cx == -1) or (cy == -1):
             cx = self._cx
             cy = self._cy
         # first, move object into given position

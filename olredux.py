@@ -277,10 +277,10 @@ class Fireball (Projectile):
     def __init__ (self, facing, mrange):
         Projectile.__init__(self, facing, mrange)
         self._DIR_IMGS = {
-            'Left': 'W_fireball.gif',
-            'Right': 'E_fireball.gif',
-            'Up' : 'N_fireball.gif',
-            'Down' : 'S_fireball.gif'
+            'Left': 'W_big_fireball.gif',
+            'Right': 'E_big_fireball.gif',
+            'Up' : 'N_big_fireball.gif',
+            'Down' : 'S_big_fireball.gif'
         }
         self._facing = facing
         pic = self._DIR_IMGS[self._facing]

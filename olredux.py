@@ -612,7 +612,7 @@ class Level (object):
         #     the_map[random.randrange(size)] = 1
         # for i in range(50):
         #     the_map[random.randrange(size)] = 2
-        the_map = lvl.levels[num]
+        the_map = lvl.LEVELS[num]
         self._map = the_map
 
     def _pos (self,x,y):
@@ -858,7 +858,7 @@ def main ():
                       WINDOW_WIDTH+WINDOW_RIGHTPANEL, WINDOW_HEIGHT,
                       autoflush=False)
 
-    level = Level()
+    level = Level(0)
     log ("level created")
 
     q = EventQueue()

@@ -100,11 +100,18 @@ class Thing (Root):
     def raise_sprite (self):
         self._sprite.canvas.tag_raise(self._sprite.id)
 
-    def lower_sprite (self):
+    def lower_sprite (self, obj=False):
         self._sprite.canvas.tag_lower(self._sprite.id)
 
     # shift sprite without changing Thing's position
     def shift (self,dx,dy):
+        p = self._screen._player
+        x_dist = self._x - p._x
+        if x_dist > (VIEWPORT_WIDTH-1)/2:
+            self.lower_sprite()
+        else:
+            self.raise_sprite()
+            p.raise_sprite()
         self.sprite().move(dx,dy)
 
     # return the sprite for display purposes
@@ -179,8 +186,7 @@ class Thing (Root):
         self._description = 'what used to be {}'.format(self._description)
 
         # Pull player sprite to top
-        self.raise_sprite()
-        # p._sprite.canvas.tag_raise(p._sprite.id)
+        p.raise_sprite()
         
     def is_thing (self):
         return True
@@ -304,6 +310,13 @@ class Fireball (Projectile):
 
         self.dematerialize()
 
+
+class Door (Thing):
+    def __init__ (self):
+        Thing.__init__(self,'Door','a door')
+        pic = 'V_door.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        self._flammable = True
 
 
 #
@@ -735,7 +748,7 @@ def log (message):
     if DEBUG:
         print time.strftime("[%H:%M:%S]",time.localtime()),message
 
-    
+
 
 #############################################################
 # 
@@ -868,6 +881,7 @@ def main ():
     scr = Screen(level,window,q,p,25,25)
     log ("screen created")
 
+    Door().materialize(scr,11,12)
 
     OlinStatue().materialize(scr,20,20)
     Rat("Pinky","a rat").register(q,40).materialize(scr,30,30)

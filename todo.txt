@@ -9,6 +9,6 @@ pizza object
 progress indicator
 moar levelssssss
 
-check out the projectiles going over the right sidepanel
-ash piles also go over the right sidepanel
+check out the projectiles going over the right sidepanel -- done 12/14
+ash piles also go over the right sidepanel -- done 12/14
 changing projectiles to stop in front of things -- done 12/12

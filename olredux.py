@@ -8,6 +8,7 @@
 
 import time
 import random
+import levels as lvl
 from graphics import * 
 
 # Print debugging logs?
@@ -96,6 +97,12 @@ class Thing (Root):
     def __str__ (self):
         return "<"+self.name()+">"
 
+    def raise_sprite (self):
+        self._sprite.canvas.tag_raise(self._sprite.id)
+
+    def lower_sprite (self):
+        self._sprite.canvas.tag_lower(self._sprite.id)
+
     # shift sprite without changing Thing's position
     def shift (self,dx,dy):
         self.sprite().move(dx,dy)
@@ -172,8 +179,9 @@ class Thing (Root):
         self._description = 'what used to be {}'.format(self._description)
 
         # Pull player sprite to top
-        p._sprite.canvas.tag_raise(p._sprite.id)
-
+        self.raise_sprite()
+        # p._sprite.canvas.tag_raise(p._sprite.id)
+        
     def is_thing (self):
         return True
 
@@ -216,7 +224,7 @@ class Projectile (Thing):
     def stop (self):
         # Just stops projectile and undraws it
         # If it needs to do more, overwrite this in a subclass
-        print 'stopping'
+        # print 'stopping'
         self._range = 0
         self.dematerialize()
 
@@ -227,40 +235,40 @@ class Projectile (Thing):
 
         # Reached the border?
         if self._x == 0 and self._dx == -1:
-            print 'at left border'
+            # print 'at left border'
             return stop_now()        
         if self._x == LEVEL_WIDTH-1 and self._dx == 1:
-            print 'at right border'
+            # print 'at right border'
             return stop_now()
         if self._y == 0 and self._dy == -1:
-            print 'at top border'
+            # print 'at top border'
             return stop_now()
         if self._y == LEVEL_HEIGHT-1 and self._dy == 1:
-            print 'at bottom border'
+            # print 'at bottom border'
             return stop_now()
 
         # Reached an unwalkable tile?
         f_tile = self._screen._level._pos(self._x+self._dx,self._y+self._dy)
         if self._screen._level._map[f_tile] in self._screen._unwalkables:
-            print 'at unwalkable tile'
+            # print 'at unwalkable tile'
             return stop_now()
 
 
         # Reached an unwalkable and unflammable Thing?
         f_obj = self.facing_object()
         if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
-            print 'at unwalkable, unflammable thing'
+            # print 'at unwalkable, unflammable thing'
             return stop_now()
 
         # On a flammable Thing?
         o_obj = self.on_object()
         if o_obj and o_obj.is_flammable():
-            print 'on flammable thing'
+            # print 'on flammable thing'
             return stop_now()
 
 
         # Else, move
-        print 'moving'
+        # print 'moving'
         self._x = self._x + self._dx
         self._y = self._y + self._dy
         
@@ -425,10 +433,10 @@ class Player (Character):
         log("Player.__init__ for "+str(self))
 
         self._DIR_IMGS = {
-            'Left': 'W_duck.gif',
-            'Right': 'E_duck.gif',
-            'Up' : 'N_duck.gif',
-            'Down' : 'S_duck.gif'
+            'Left': 'W_smaller_duck.gif',
+            'Right': 'E_smaller_duck.gif',
+            'Up' : 'N_smaller_duck.gif',
+            'Down' : 'S_smaller_duck.gif'
         }
         self._facing = 'Left'
         pic = self._DIR_IMGS[self._facing]
@@ -597,13 +605,14 @@ class Player (Character):
 # implements a specific map -- perhaps of Olin?
 #
 class Level (object):
-    def __init__ (self):
-        size = LEVEL_WIDTH * LEVEL_HEIGHT
-        the_map = [0] * size
-        for i in range(100):
-            the_map[random.randrange(size)] = 1
-        for i in range(50):
-            the_map[random.randrange(size)] = 2
+    def __init__ (self, num):
+        # size = LEVEL_WIDTH * LEVEL_HEIGHT
+        # the_map = [0] * size
+        # for i in range(100):
+        #     the_map[random.randrange(size)] = 1
+        # for i in range(50):
+        #     the_map[random.randrange(size)] = 2
+        the_map = lvl.levels[num]
         self._map = the_map
 
     def _pos (self,x,y):
@@ -665,15 +674,17 @@ class Screen (object):
             if cell:
                 sx,sy = self._level.ind_to_pos(ind)
 
-                elt = Rectangle(Point(sx-dx,sy-dy),
-                                Point(sx-dx+TILE_SIZE,sy-dy+TILE_SIZE))
+                pic = lvl.SPRITES[cell]
+                elt = Image(Point(sx-dx+TILE_SIZE/2, sy-dy+TILE_SIZE/2), pic)
+                # elt = Rectangle(Point(sx-dx,sy-dy),
+                #                 Point(sx-dx+TILE_SIZE,sy-dy+TILE_SIZE))
 
-                if cell == 1:
-                    elt.setFill('green')
-                    elt.setOutline('green')
-                elif cell == 2:
-                    elt.setFill('sienna')
-                    elt.setOutline('sienna')
+                # if cell == 1:
+                #     elt.setFill('green')
+                #     elt.setOutline('green')
+                # elif cell == 2:
+                #     elt.setFill('sienna')
+                #     elt.setOutline('sienna')
                 elt.draw(window)
 
                 self._map_elts[ind] = elt

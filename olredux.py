@@ -15,12 +15,12 @@ from graphics import *
 DEBUG = True
 
 # Tile size of the level
-LEVEL_WIDTH = 15
-LEVEL_HEIGHT = 15
+LEVEL_WIDTH = 50
+LEVEL_HEIGHT = 50
 
 # Tile size of the viewport (through which you view the level)
-VIEWPORT_WIDTH = 25
-VIEWPORT_HEIGHT = 25
+VIEWPORT_WIDTH = 15
+VIEWPORT_HEIGHT = 15
 
 # Pixel size of a tile (which gives you the size of the window)
 TILE_SIZE = 48

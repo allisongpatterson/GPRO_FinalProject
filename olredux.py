@@ -384,7 +384,37 @@ class Character (Thing):
     def is_character (self):
         return True
 
+class Llama (Character):
+    def __init__ (self,facing,intelligence,health):
+        self._health = health
+        self._intelligence = intelligence
+        words = {0: 'dumb', 1: 'average', 2: 'smart'}
+        Character.__init__(self,'Llama','a {} llama'.format(words[intelligence]))
+        log("Llama.__init__ for "+str(self))
+        self._DIR_IMGS = {
+            'Left': 'W_llama.gif',
+            'Right': 'E_llama.gif',
+            'Up' : 'N_llama.gif',
+            'Down' : 'S_llama.gif'
+        }
+        self._facing = facing
+        pic = self._DIR_IMGS[self._facing]
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        self._flammable = True
 
+    # todo: add method for getting hit by fireball, taking damage, and seeing if you should burn (die) taking health into account
+
+    def event (self,q):
+        log("event for "+str(self))
+
+        if not self.is_burnt():
+            pass 
+            # If dumb llama: stand in place, spit if player is in front of you and within range.
+            # If average llama: move randomly, spit if player is in front of you and within range.
+            # If smart llama: move towards player if they get within <x> tiles of you, spit if player is in front of you and within range.
+
+            # Re-register event with same frequency if not a pile of ashes
+            self.register(q,self._freq)
 
 # 
 # A Rat is an example of a character which defines an event that makes
@@ -886,6 +916,8 @@ def main ():
     OlinStatue().materialize(scr,20,20)
     Rat("Pinky","a rat").register(q,40).materialize(scr,30,30)
     Rat("Brain","a rat with a big head").register(q,60).materialize(scr,10,30)
+
+    Llama('Left',0,1).materialize(scr,10,10)
 
     create_panel(window)
 

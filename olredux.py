@@ -484,15 +484,15 @@ class Llama (Character):
         px = self._screen._player._x
         py = self._screen._player._y
 
-        if (abs(px-lx) < self._fb_range+1) and (abs(py-ly) < self._fb_range+1):
+        if (abs(px-lx) < self._fb_range+3) and (abs(py-ly) < self._fb_range+3):
             # Am I facing the border?
             dx,dy = MOVE[self._facing]
             if not (self._x+dx >= 0 and self._x+dx <= LEVEL_WIDTH-1 and self._y+dy >= 0 and self._y+dy <= LEVEL_HEIGHT-1):
                 return
 
-            # Am I facing an unwalkable tile? (All tiles are nonflammable at this point)
-            f_tile = self._screen._level._pos(self._x+dx,self._y+dy)
-            if self._screen._level._map[f_tile] in lvl.UNWALKABLES:
+            # Am I facing an unwalkable and unflammable tile?
+            f_tile_val = self._screen.tile(self._x+dx,self._y+dy)
+            if f_tile_val in lvl.UNWALKABLES and f_tile_val not in lvl.FLAMMABLES:
                 return 
 
             # Am I facing a nonflammable object?
@@ -592,9 +592,9 @@ class Player (Character):
         if not (self._x+dx >= 0 and self._x+dx <= LEVEL_WIDTH-1 and self._y+dy >= 0 and self._y+dy <= LEVEL_HEIGHT-1):
             return
 
-        # Am I facing an unwalkable tile? (All tiles are nonflammable at this point)
-        f_tile = self._screen._level._pos(self._x+dx,self._y+dy)
-        if self._screen._level._map[f_tile] in lvl.UNWALKABLES:
+        # Am I facing an unwalkable and unflammable tile?
+        f_tile_val = self._screen.tile(self._x+dx,self._y+dy)
+        if f_tile_val in lvl.UNWALKABLES and f_tile_val not in lvl.FLAMMABLES:
             return 
 
         # Am I facing a nonflammable object?

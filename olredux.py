@@ -100,11 +100,10 @@ class Thing (Root):
     def raise_sprite (self):
         self._sprite.canvas.tag_raise(self._sprite.id)
 
-    def lower_sprite (self, obj=False):
+    def lower_sprite (self):
         self._sprite.canvas.tag_lower(self._sprite.id)
 
-    # shift sprite without changing Thing's position
-    def shift (self,dx,dy):
+    def raise_or_lower_sprite (self):
         p = self._screen._player
         x_dist = self._x - p._x
         if x_dist > (VIEWPORT_WIDTH-1)/2:
@@ -112,6 +111,10 @@ class Thing (Root):
         else:
             self.raise_sprite()
             p.raise_sprite()
+
+    # shift sprite without changing Thing's position
+    def shift (self,dx,dy):
+        self.raise_or_lower_sprite()
         self.sprite().move(dx,dy)
 
     # return the sprite for display purposes
@@ -209,6 +212,7 @@ class Projectile (Thing):
         self._facing = facing
         self._dx, self._dy = MOVE[facing]
         self._range = mrange
+        self._walkable = True
 
 
     def register (self,q,freq):
@@ -225,6 +229,7 @@ class Projectile (Thing):
                 # Re-register event with same frequency
                 self.register(q,self._freq)
         else:
+            log(str(self)+' stopping at max range')
             self.stop()
 
     def stop (self):
@@ -241,46 +246,46 @@ class Projectile (Thing):
 
         # Reached the border?
         if self._x == 0 and self._dx == -1:
-            # print 'at left border'
+            log(str(self)+' stopping at left border')
             return stop_now()        
         if self._x == LEVEL_WIDTH-1 and self._dx == 1:
-            # print 'at right border'
+            log(str(self)+' stopping at right border')
             return stop_now()
         if self._y == 0 and self._dy == -1:
-            # print 'at top border'
+            log(str(self)+' stopping at top border')
             return stop_now()
         if self._y == LEVEL_HEIGHT-1 and self._dy == 1:
-            # print 'at bottom border'
+            log(str(self)+' stopping at bottom border')
             return stop_now()
 
         # Reached an unwalkable and unflammable tile?
         f_tile = self._screen._level._pos(self._x+self._dx,self._y+self._dy)
         tile_val = self._screen._level._map[f_tile]
         if tile_val in lvl.UNWALKABLES and tile_val not in lvl.FLAMMABLES:
-            # print 'at unwalkable tile'
+            log(str(self)+' stopping at unwalkable, unflammable tile')
             return stop_now()
 
         # On a flammable tile?
         o_tile = self._screen._level._pos(self._x, self._y)
         if self._screen._level._map[o_tile] in lvl.FLAMMABLES:
-            # print 'on flammable tile'
+            log(str(self)+' stopping on flammable tile')
             return stop_now()
 
         # Reached an unwalkable and unflammable Thing?
         f_obj = self.facing_object()
         if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
-            # print 'at unwalkable, unflammable thing'
+            log(str(self)+' stopping at unwalkable, unflammable Thing')
             return stop_now()
 
         # On a flammable Thing?
         o_obj = self.on_object()
         if o_obj and o_obj.is_flammable():
-            # print 'on flammable thing'
+            log(str(self)+' stopping on flammable Thing')
             return stop_now()
 
 
         # Else, move
-        # print 'moving'
+        log(str(self)+' moving')
         self._x = self._x + self._dx
         self._y = self._y + self._dy
         
@@ -290,7 +295,7 @@ class Projectile (Thing):
         # Update window so changes are visible
         self._screen._window.update()
 
-        # Not done yet
+        # Not done moving yet
         return False
 
 class Fireball (Projectile):
@@ -327,9 +332,12 @@ class Fireball (Projectile):
             self._screen._level._map[tile_pos] = 0000
             self._screen._map_elts[tile_pos] = elt
 
+            self._screen._player.raise_sprite()
+
         # Dematerialize projectile
         self.dematerialize()
 
+        self._screen._window.update()   
 
 class Door (Thing):
     def __init__ (self,description):
@@ -357,8 +365,8 @@ class Felix (Thing):
 class Character (Thing):
     def __init__ (self,name,desc):
         Thing.__init__(self,name,desc)
-        self._walkable = False
         log("Character.__init__ for "+str(self))
+        self._walkable = False
         rect = Rectangle(Point(1,1),
                          Point(TILE_SIZE-1,TILE_SIZE-1))
         rect.setFill("red")
@@ -370,6 +378,10 @@ class Character (Thing):
         q.enqueue(freq,self)
         return self
 
+    def turn (self,dx,dy):
+        return False
+
+
     # A character has a move() method that you should implement
     # to enable movement
 
@@ -377,6 +389,10 @@ class Character (Thing):
         tx = self._x + dx
         ty = self._y + dy
 
+        # Turn if applicable
+        turned = self.turn(dx,dy)
+        if turned:
+            return
 
         # Trying to go out of bounds?
         if not (tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT):
@@ -406,12 +422,18 @@ class Character (Thing):
         return True
 
 class Llama (Character):
-    def __init__ (self,facing,intelligence,health):
-        self._health = health
-        self._intelligence = intelligence
+    def __init__ (self,facing,intelligence,health,ax,ay):
         words = {0: 'dumb', 1: 'average', 2: 'smart'}
         Character.__init__(self,'Llama','a {} llama'.format(words[intelligence]))
         log("Llama.__init__ for "+str(self))
+        self._ax = ax; # Anchor locations
+        self._ay = ay;
+        self._health = health # Stats
+        self._intelligence = intelligence
+        self._flammable = True
+        self._fb_range = 2
+        self._fb_speed = 15
+        self._wander_range = 5
         self._DIR_IMGS = {
             'Left': 'W_llama.gif',
             'Right': 'E_llama.gif',
@@ -421,9 +443,6 @@ class Llama (Character):
         self._facing = facing
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
-        self._flammable = True
-        self._fb_range = 2
-        self._fb_speed = 15
 
     # todo: add method for getting hit by fireball, taking damage, and seeing if you should burn (die) taking health into account
 
@@ -432,16 +451,49 @@ class Llama (Character):
 
         if not self.is_burnt():
             if self._intelligence == 0:
-            # If dumb llama: stand in place, spit if player is in front of you and within range.
-                if random.randrange(4) == 0:
+                # If dumb llama: stand in place, spit if player 
+                # is in front of you and within range.
+                if random.randrange(6) == 0:
                     self.face_player()
-                else:
+                elif random.randrange(6) == 0:
                     self.shoot_player()
-            # If average llama: move randomly, spit if player is in front of you and within range.
+            elif self._intelligence == 1:
+                # If average llama: move randomly within range, 
+                # spit if player is in front of you and within range.
+                if random.randrange(6) == 0:
+                    dx,dy = random.choice(MOVE.values())
+                    if abs(self._x+dx-self._ax) < self._wander_range and abs(self._y+dy-self._ay) < self._wander_range:
+                        # If still within wander range, move
+                        self.move(dx,dy)
+                elif random.randrange(6) == 0:
+                    self.face_player()
+                elif random.randrange(6) == 0:
+                    self.shoot_player()
             # If smart llama: move towards player if they get within <x> tiles of you, spit if player is in front of you and within range.
 
             # Re-register event with same frequency if not a pile of ashes
             self.register(q,self._freq)
+
+    def turn (self,dx,dy):
+        fdx,fdy = MOVE[self._facing]
+        p = self._screen._player
+
+        if not (fdx == dx and fdy == dy):
+            key = DIRECTIONS[(dx,dy)]
+            self._facing = key
+            self._sprite.undraw()
+            pic = self._DIR_IMGS[self._facing]
+            self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+            self._sprite.move((self._x-(p._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                               (self._y-(p._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+            self._sprite.draw(self._screen._window)
+            self.raise_or_lower_sprite() # So that sprite doesn't show up over the sidepanel 
+
+            # Update window so changes are visible
+            self._screen._window.update()
+            return True
+
+        return False
 
 
     def face_player(self):
@@ -1003,8 +1055,10 @@ def play_level_0 (window):
     Door("a dry, wooden door with no doorknob").materialize(scr,11,10)
     Felix("Help!").materialize(scr,12,9)
 
-    Llama('Left',0,1).register(q, 100).materialize(scr,39,43)
-    Llama('Left',0,1).register(q, 100).materialize(scr,39,45)
+    l1x,l1y = (39,43)
+    l2x,l2y = (39,45)
+    l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
+    ll = Llama('Left',1,1,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
     create_panel(window)
 

@@ -1,13 +1,13 @@
 TODO:
 
 1 level
-    background tiles -- done 12-15
-    foreground objects -- done 12-15
+    background tiles -- done 12/15
+    foreground objects -- done 12/15
     opening blocked area when llamas are ded - AP
     vortex
 AI for llamas
-    dumb: (sometimes) turn in place, spit when facing and in range (short) -- done 12-15
-    average: move randomly within area, spit when facing and in range (medium) - JK
+    dumb: (sometimes) turn in place, spit when facing and in range (short) -- done 12/15
+    average: move randomly within area, spit when facing and in range (medium) -- done 12/16
     smart: move towards player when within area, spit when facing and in range (medium/large) - JK
 health system - JK
 usable objects
@@ -16,7 +16,7 @@ progress indicator
 inventory selector
 moar levelssssss
 
-being able to fire when right next to a flammable tile - JK
+being able to fire when right next to a flammable tile -- done 12/16
 
 make it into an event queue function - AP
     ashes that used to be tiles going over the right sidepanel

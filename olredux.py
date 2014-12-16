@@ -920,7 +920,7 @@ def main ():
 
     create_panel(window)
 
-    p.materialize(scr,25,25)
+    p.materialize(scr,9,11)
 
     q.enqueue(1,CheckInput(window,p))
 

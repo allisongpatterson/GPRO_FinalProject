@@ -1,6 +1,8 @@
 TODO:
 
 1 level
+    background tiles -- done 12-15
+    foreground objects
 AI for llamas
 health system
 usable objects

@@ -255,7 +255,7 @@ class Projectile (Thing):
 
         # Reached an unwalkable tile?
         f_tile = self._screen._level._pos(self._x+self._dx,self._y+self._dy)
-        if self._screen._level._map[f_tile] in self._screen._unwalkables:
+        if self._screen._level._map[f_tile] in lvl.UNWALKABLES:
             # print 'at unwalkable tile'
             return stop_now()
 
@@ -363,7 +363,7 @@ class Character (Thing):
 
         # Trying to walk through an unwalkable tile?
         new_pos = self._screen._level._map[self._screen._level._pos(tx,ty)]
-        if new_pos in self._screen._unwalkables:
+        if new_pos in lvl.UNWALKABLES:
             return
 
         # Trying to walk through a Thing that is unwalkable?
@@ -506,7 +506,7 @@ class Player (Character):
 
         # Am I facing an unwalkable tile? (All tiles are nonflammable at this point)
         f_tile = self._screen._level._pos(self._x+dx,self._y+dy)
-        if self._screen._level._map[f_tile] in self._screen._unwalkables:
+        if self._screen._level._map[f_tile] in lvl.UNWALKABLES:
             return 
 
         # Am I facing a nonflammable object?
@@ -548,7 +548,7 @@ class Player (Character):
 
         # Trying to walk through an unwalkable tile?
         new_pos = self._screen._level._map[self._screen._level._pos(tx,ty)]
-        if new_pos in self._screen._unwalkables:
+        if new_pos in lvl.UNWALKABLES:
             return
 
         # Trying to walk through a Thing that is unwalkable?
@@ -690,7 +690,6 @@ class Screen (object):
         self._q = q
         self._player = p
         self._level = level
-        self._unwalkables = [2]
         self._window = window
         self._cx = cx    # the initial center tile position 
         self._cy = cy    #  of the screen
@@ -911,7 +910,7 @@ def main ():
     scr = Screen(level,window,q,p,25,25)
     log ("screen created")
 
-    Door().materialize(scr,11,12)
+    Door().materialize(scr,11,10)
 
     OlinStatue().materialize(scr,20,20)
     Rat("Pinky","a rat").register(q,40).materialize(scr,30,30)

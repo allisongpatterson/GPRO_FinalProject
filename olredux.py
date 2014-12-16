@@ -253,12 +253,18 @@ class Projectile (Thing):
             # print 'at bottom border'
             return stop_now()
 
-        # Reached an unwalkable tile?
+        # Reached an unwalkable and unflammable tile?
         f_tile = self._screen._level._pos(self._x+self._dx,self._y+self._dy)
-        if self._screen._level._map[f_tile] in lvl.UNWALKABLES:
+        tile_val = self._screen._level._map[f_tile]
+        if tile_val in lvl.UNWALKABLES and tile_val not in lvl.FLAMMABLES:
             # print 'at unwalkable tile'
             return stop_now()
 
+        # On a flammable tile?
+        o_tile = self._screen._level._pos(self._x, self._y)
+        if self._screen._level._map[o_tile] in lvl.FLAMMABLES:
+            # print 'on flammable tile'
+            return stop_now()
 
         # Reached an unwalkable and unflammable Thing?
         f_obj = self.facing_object()
@@ -302,18 +308,32 @@ class Fireball (Projectile):
 
     def stop (self):
         # Burn the thing if possible
-        print 'stopping'
+        # print 'stopping'
         self._range = 0
         o_obj = self.on_object()
+        o_tile = self._screen.tile(self._x,self._y)
         if o_obj and o_obj.is_flammable():
             o_obj.burn()
+        elif o_tile in lvl.FLAMMABLES:
+            elt = self._screen.tile_object(self._x,self._y)
+            elt.undraw()
+            pic = 'ash.gif'
+            elt = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+            elt.move((self._x-(self._screen._player._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                     (self._y-(self._screen._player._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+            elt.draw(self._screen._window)
 
+            tile_pos = self._screen._level._pos(self._x,self._y)
+            self._screen._level._map[tile_pos] = 0000
+            self._screen._map_elts[tile_pos] = elt
+
+        # Dematerialize projectile
         self.dematerialize()
 
 
 class Door (Thing):
-    def __init__ (self):
-        Thing.__init__(self,'Door','a door')
+    def __init__ (self,description):
+        Thing.__init__(self,'Door',description)
         pic = 'V_door.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         self._flammable = True
@@ -323,15 +343,11 @@ class Door (Thing):
 # Example of a kind of thing with its specific sprite
 # (here, a rather boring gray rectangle.)
 #
-class OlinStatue (Thing):
-    def __init__ (self):
-        Thing.__init__(self,"Olin statue","a statue of F. W. Olin")
-        rect = Rectangle(Point(0,0),Point(TILE_SIZE,TILE_SIZE))
-        rect.setFill("gray")
-        rect.setOutline("gray")
-        self._sprite = rect
-        self._takable = True
-
+class Felix (Thing):
+    def __init__ (self,description):
+        Thing.__init__(self,"Felix",description)
+        pic = 'felix.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
 
 #
@@ -348,6 +364,11 @@ class Character (Thing):
         rect.setFill("red")
         rect.setOutline("red")
         self._sprite = rect
+
+    def register (self,q,freq):
+        self._freq = freq
+        q.enqueue(freq,self)
+        return self
 
     # A character has a move() method that you should implement
     # to enable movement
@@ -401,6 +422,8 @@ class Llama (Character):
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         self._flammable = True
+        self._fb_range = 2
+        self._fb_speed = 15
 
     # todo: add method for getting hit by fireball, taking damage, and seeing if you should burn (die) taking health into account
 
@@ -408,13 +431,81 @@ class Llama (Character):
         log("event for "+str(self))
 
         if not self.is_burnt():
-            pass 
+            if self._intelligence == 0:
             # If dumb llama: stand in place, spit if player is in front of you and within range.
+                if random.randrange(4) == 0:
+                    self.face_player()
+                else:
+                    self.shoot_player()
             # If average llama: move randomly, spit if player is in front of you and within range.
             # If smart llama: move towards player if they get within <x> tiles of you, spit if player is in front of you and within range.
 
             # Re-register event with same frequency if not a pile of ashes
             self.register(q,self._freq)
+
+
+    def face_player(self):
+        # turn to face player
+        lx = self._x
+        ly = self._y
+        px = self._screen._player._x
+        py = self._screen._player._y
+
+        new_facing = False
+        if abs(px-lx) > abs(py-ly):
+            if px-lx > 0:
+                new_facing = 'Right'
+            else:
+                new_facing = 'Left'
+        else:
+            if py-ly > 0:
+                new_facing = 'Down'
+            else:
+                new_facing = 'Up'
+
+        # If you actually turned, replace with new image
+        if self._facing != new_facing:
+            self._facing = new_facing
+            self._sprite.undraw()
+            pic = self._DIR_IMGS[self._facing]
+            self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+            self._sprite.move((self._x-(px-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                               (self._y-(py-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+            self._sprite.draw(self._screen._window)
+
+            # Update window so changes are visible
+            self._screen._window.update()
+
+
+    def shoot_player(self):
+        # Shoot player if in range
+        lx = self._x
+        ly = self._y
+        px = self._screen._player._x
+        py = self._screen._player._y
+
+        if (abs(px-lx) < self._fb_range+1) and (abs(py-ly) < self._fb_range+1):
+            # Am I facing the border?
+            dx,dy = MOVE[self._facing]
+            if not (self._x+dx >= 0 and self._x+dx <= LEVEL_WIDTH-1 and self._y+dy >= 0 and self._y+dy <= LEVEL_HEIGHT-1):
+                return
+
+            # Am I facing an unwalkable tile? (All tiles are nonflammable at this point)
+            f_tile = self._screen._level._pos(self._x+dx,self._y+dy)
+            if self._screen._level._map[f_tile] in lvl.UNWALKABLES:
+                return 
+
+            # Am I facing a nonflammable object?
+            f_obj = self.facing_object()
+            if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
+                return
+
+            # Else, shoot fireball
+            Fireball(
+                self._facing, self._fb_range).register(
+                self._screen._q, self._fb_speed).materialize(
+                self._screen, self._x+dx, self._y+dy, px, py
+            )
 
 # 
 # A Rat is an example of a character which defines an event that makes
@@ -442,10 +533,7 @@ class Rat (Character):
     # use method chaining, which is cool (though not as cool as
     # bowties...)
 
-    def register (self,q,freq):
-        self._freq = freq
-        q.enqueue(freq,self)
-        return self
+
 
     # this gets called from event queue when the time is right
 
@@ -471,7 +559,7 @@ class Rat (Character):
 # The Player character
 #
 class Player (Character):
-    def __init__ (self,name):
+    def __init__ (self,name,facing):
         Character.__init__(self,name,"Yours truly")
         log("Player.__init__ for "+str(self))
 
@@ -481,7 +569,7 @@ class Player (Character):
             'Up' : 'N_smaller_duck.gif',
             'Down' : 'S_smaller_duck.gif'
         }
-        self._facing = 'Left'
+        self._facing = facing
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         
@@ -735,6 +823,10 @@ class Screen (object):
     def tile (self,x,y):
         return self._level.tile(x,y)
 
+    # return the graphics object at a given tile position in the level
+    def tile_object (self,x,y):
+        return self._map_elts[self._level._pos(x,y)]
+
     # add a thing to the screen at a given position
     def add (self,item,x,y,cx=-1,cy=-1):
         if (cx == -1) or (cy == -1):
@@ -894,33 +986,29 @@ def create_panel (window):
 # call window.update() to refresh the window when we make
 # changes
 #
-def main ():
 
-    window = GraphWin("Olinland Redux", 
-                      WINDOW_WIDTH+WINDOW_RIGHTPANEL, WINDOW_HEIGHT,
-                      autoflush=False)
-
+def play_level_0 (window):
     level = Level(0)
     log ("level created")
 
     q = EventQueue()
 
-    p = Player("...what's your name, bub?...")
+    p = Player("...what's your name, bub?...", 'Right')
+    px = 4
+    py = 10
 
-    scr = Screen(level,window,q,p,25,25)
+    scr = Screen(level,window,q,p,px,py)
     log ("screen created")
 
-    Door().materialize(scr,11,10)
+    Door("a dry, wooden door with no doorknob").materialize(scr,11,10)
+    Felix("Help!").materialize(scr,12,9)
 
-    OlinStatue().materialize(scr,20,20)
-    Rat("Pinky","a rat").register(q,40).materialize(scr,30,30)
-    Rat("Brain","a rat with a big head").register(q,60).materialize(scr,10,30)
-
-    Llama('Left',0,1).materialize(scr,10,10)
+    Llama('Left',0,1).register(q, 100).materialize(scr,39,43)
+    Llama('Left',0,1).register(q, 100).materialize(scr,39,45)
 
     create_panel(window)
 
-    p.materialize(scr,9,11)
+    p.materialize(scr,px,py)
 
     q.enqueue(1,CheckInput(window,p))
 
@@ -929,6 +1017,16 @@ def main ():
         q.dequeue_if_ready()
         # Time unit = 10 milliseconds
         time.sleep(0.01)
+
+
+def main ():
+
+    window = GraphWin("Olinland Redux", 
+                      WINDOW_WIDTH+WINDOW_RIGHTPANEL, WINDOW_HEIGHT,
+                      autoflush=False)
+
+
+    play_level_0(window)
 
 
 

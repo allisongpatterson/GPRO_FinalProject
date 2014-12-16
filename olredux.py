@@ -465,11 +465,16 @@ class Llama (Character):
                     if abs(self._x+dx-self._ax) < self._wander_range and abs(self._y+dy-self._ay) < self._wander_range:
                         # If still within wander range, move
                         self.move(dx,dy)
-                elif random.randrange(6) == 0:
-                    self.face_player()
-                elif random.randrange(6) == 0:
+                elif random.randrange(4) == 0:
                     self.shoot_player()
-            # If smart llama: move towards player if they get within <x> tiles of you, spit if player is in front of you and within range.
+            elif self._intelligence == 2:
+                # If smart llama: move towards player if they get 
+                # within <x> tiles of you, spit if player is in 
+                #front of you and within range.
+                if random.randrange(6) == 0:
+                    self.move_towards_player()
+                elif random.randrange(2) == 0:
+                    self.shoot_player()
 
             # Re-register event with same frequency if not a pile of ashes
             self.register(q,self._freq)
@@ -496,7 +501,27 @@ class Llama (Character):
         return False
 
 
-    def face_player(self):
+    def move_towards_player (self):
+        p = self._screen._player
+        px = p._x
+        py = p._y
+        lx = self._x
+        ly = self._y
+
+        if (abs(px-lx) < self._wander_range) and (abs(py-ly) < self._wander_range):
+            distx = px - lx
+            disty = py - ly
+            choices = []
+            if distx:
+                choices.append((sign(distx),0))
+            if disty:
+                choices.append((0,sign(disty)))
+            if choices:
+                dx,dy = random.choice(choices)
+                self.move(dx,dy)
+
+
+    def face_player (self):
         # turn to face player
         lx = self._x
         ly = self._y
@@ -1029,6 +1054,9 @@ def create_panel (window):
     fg.draw(window)
 
 
+def sign (x):
+    return (x > 0) - (x < 0)
+
 #
 # The main function
 # 
@@ -1058,7 +1086,7 @@ def play_level_0 (window):
     l1x,l1y = (39,43)
     l2x,l2y = (39,45)
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
-    ll = Llama('Left',1,1,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
+    ll = Llama('Left',2,1,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
     create_panel(window)
 

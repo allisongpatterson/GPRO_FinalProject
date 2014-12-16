@@ -8,7 +8,7 @@ TODO:
 AI for llamas
     dumb: (sometimes) turn in place, spit when facing and in range (short) -- done 12/15
     average: move randomly within area, spit when facing and in range (medium) -- done 12/16
-    smart: move towards player when within area, spit when facing and in range (medium/large) - JK
+    smart: move towards player when within area, spit when facing and in range (medium/large) -- done 12/16
 health system - JK
 usable objects
 pizza object

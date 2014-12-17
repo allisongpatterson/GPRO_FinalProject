@@ -61,6 +61,10 @@ class Root (object):
     def is_player (self):
         return False
 
+    # is this object a LLama?
+    def is_llama (self):
+        return False
+
     # can this object be walked over during movement?
     def is_walkable (self):
         return False
@@ -103,18 +107,19 @@ class Thing (Root):
     def lower_sprite (self):
         self._sprite.canvas.tag_lower(self._sprite.id)
 
-    def raise_or_lower_sprite (self):
+    def raise_or_lower_sprite (self,raise_player=True):
         p = self._screen._player
         x_dist = self._x - p._x
         if x_dist > (VIEWPORT_WIDTH-1)/2:
             self.lower_sprite()
         else:
             self.raise_sprite()
-            p.raise_sprite()
+            if raise_player:
+                p.raise_sprite()
 
     # shift sprite without changing Thing's position
-    def shift (self,dx,dy):
-        self.raise_or_lower_sprite()
+    def shift (self,dx,dy,raise_player=True):
+        self.raise_or_lower_sprite(raise_player)
         self.sprite().move(dx,dy)
 
     # return the sprite for display purposes
@@ -207,11 +212,12 @@ class Thing (Root):
         return self._burnt
 
 class Projectile (Thing):
-    def __init__ (self, facing, mrange):
+    def __init__ (self, facing, mrange, power):
         Thing.__init__(self,'Projectile','A projectile')
         self._facing = facing
         self._dx, self._dy = MOVE[facing]
         self._range = mrange
+        self._power = power
         self._walkable = True
 
 
@@ -238,6 +244,7 @@ class Projectile (Thing):
         # print 'stopping'
         self._range = 0
         self.dematerialize()
+        self._screen._window.update()
 
     def move_or_stop (self):
         def stop_now():
@@ -271,14 +278,19 @@ class Projectile (Thing):
             log(str(self)+' stopping on flammable tile')
             return stop_now()
 
-        # Reached an unwalkable and unflammable Thing?
+        # Reached an unwalkable, unflammable, nonLlama Thing?
         f_obj = self.facing_object()
-        if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
+        if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable() and not f_obj.is_llama():
             log(str(self)+' stopping at unwalkable, unflammable Thing')
             return stop_now()
 
         # On a flammable Thing?
         o_obj = self.on_object()
+        if o_obj and o_obj.is_llama():
+            log(str(self)+' stopping on Llama')
+            return stop_now()
+
+        # On a flammable Thing?
         if o_obj and o_obj.is_flammable():
             log(str(self)+' stopping on flammable Thing')
             return stop_now()
@@ -299,17 +311,16 @@ class Projectile (Thing):
         return False
 
 class Fireball (Projectile):
-    def __init__ (self, facing, mrange):
-        Projectile.__init__(self, facing, mrange)
-        self._DIR_IMGS = {
-            'Left': 'W_big_fireball.gif',
-            'Right': 'E_big_fireball.gif',
-            'Up' : 'N_big_fireball.gif',
-            'Down' : 'S_big_fireball.gif'
-        }
+    def __init__ (self, facing, mrange, power):
+        Projectile.__init__(self, facing, mrange, power)
+        imgs = [{'Left': 'W_fireball.gif','Right': 'E_fireball.gif','Up' : 'N_fireball.gif','Down' : 'S_fireball.gif'},
+            {'Left': 'W_big_fireball.gif','Right': 'E_big_fireball.gif','Up' : 'N_big_fireball.gif','Down' : 'S_big_fireball.gif'}
+        ]
+        self._DIR_IMGS = imgs[power]
         self._facing = facing
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+
 
     def stop (self):
         # Burn the thing if possible
@@ -319,6 +330,8 @@ class Fireball (Projectile):
         o_tile = self._screen.tile(self._x,self._y)
         if o_obj and o_obj.is_flammable():
             o_obj.burn()
+        elif o_obj and o_obj.is_llama():
+            o_obj.hit(self._power)
         elif o_tile in lvl.FLAMMABLES:
             elt = self._screen.tile_object(self._x,self._y)
             elt.undraw()
@@ -336,8 +349,84 @@ class Fireball (Projectile):
 
         # Dematerialize projectile
         self.dematerialize()
-
         self._screen._window.update()   
+
+class Spitball (Projectile):
+    def __init__ (self, facing, mrange, power):
+        Projectile.__init__(self, facing, mrange, power)
+        imgs = [{'Left': 'W_fireball.gif','Right': 'E_fireball.gif','Up' : 'N_fireball.gif','Down' : 'S_fireball.gif'},
+            {'Left': 'W_big_fireball.gif','Right': 'E_big_fireball.gif','Up' : 'N_big_fireball.gif','Down' : 'S_big_fireball.gif'}
+        ]
+        self._DIR_IMGS = imgs[power]
+        self._facing = facing
+        pic = self._DIR_IMGS[self._facing]
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+
+
+    def move_or_stop (self):
+        def stop_now():
+            self.stop()
+            return True
+
+        # Reached the border?
+        if self._x == 0 and self._dx == -1:
+            log(str(self)+' stopping at left border')
+            return stop_now()        
+        if self._x == LEVEL_WIDTH-1 and self._dx == 1:
+            log(str(self)+' stopping at right border')
+            return stop_now()
+        if self._y == 0 and self._dy == -1:
+            log(str(self)+' stopping at top border')
+            return stop_now()
+        if self._y == LEVEL_HEIGHT-1 and self._dy == 1:
+            log(str(self)+' stopping at bottom border')
+            return stop_now()
+
+        # Reached an unwalkable tile?
+        f_tile = self._screen._level._pos(self._x+self._dx,self._y+self._dy)
+        tile_val = self._screen._level._map[f_tile]
+        if tile_val in lvl.UNWALKABLES:
+            log(str(self)+' stopping at unwalkable tile')
+            return stop_now()
+
+        # Reached an unwalkable and nonPlayer Thing?
+        f_obj = self.facing_object()
+        if f_obj and not f_obj.is_walkable() and not f_obj.is_player():
+            log(str(self)+' stopping at unwalkable, nonPlayer Thing')
+            return stop_now()
+
+        # On Player?
+        o_obj = self.on_object()
+        if o_obj and o_obj.is_player():
+            log(str(self)+' stopping on Player')
+            return stop_now()
+
+
+        # Else, move
+        log(str(self)+' moving')
+        self._x = self._x + self._dx
+        self._y = self._y + self._dy
+        
+        # Shift sprite
+        self.shift(self._dx*TILE_SIZE,self._dy*TILE_SIZE,False)
+        
+        # Update window so changes are visible
+        self._screen._window.update()
+
+        # Not done moving yet
+        return False
+
+    def stop (self):
+        # Hit the player if possible
+        self._range = 0
+        o_obj = self.on_object()
+        o_tile = self._screen.tile(self._x,self._y)
+        if o_obj and o_obj.is_player():
+            o_obj.hit(self._power)
+        
+        # Dematerialize projectile
+        self.dematerialize()
+        self._screen._window.update() 
 
 class Door (Thing):
     def __init__ (self,description):
@@ -430,7 +519,6 @@ class Llama (Character):
         self._ay = ay;
         self._health = health # Stats
         self._intelligence = intelligence
-        self._flammable = True
         self._fb_range = 2
         self._fb_speed = 15
         self._wander_range = 5
@@ -444,7 +532,15 @@ class Llama (Character):
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
-    # todo: add method for getting hit by fireball, taking damage, and seeing if you should burn (die) taking health into account
+    def is_llama (self):
+        return True
+
+    def hit (self, power):
+        log(str(self)+' gets hit for '+str(power+1))   
+        self._health -= (power + 1)
+
+        if self._health <= 0:
+            self.burn()
 
     def event (self,q):
         log("event for "+str(self))
@@ -456,7 +552,7 @@ class Llama (Character):
                 if random.randrange(6) == 0:
                     self.face_player()
                 elif random.randrange(6) == 0:
-                    self.shoot_player()
+                    self.shoot_at_player()
             elif self._intelligence == 1:
                 # If average llama: move randomly within range, 
                 # spit if player is in front of you and within range.
@@ -466,7 +562,7 @@ class Llama (Character):
                         # If still within wander range, move
                         self.move(dx,dy)
                 elif random.randrange(4) == 0:
-                    self.shoot_player()
+                    self.shoot_at_player()
             elif self._intelligence == 2:
                 # If smart llama: move towards player if they get 
                 # within <x> tiles of you, spit if player is in 
@@ -474,7 +570,7 @@ class Llama (Character):
                 if random.randrange(6) == 0:
                     self.move_towards_player()
                 elif random.randrange(2) == 0:
-                    self.shoot_player()
+                    self.shoot_at_player()
 
             # Re-register event with same frequency if not a pile of ashes
             self.register(q,self._freq)
@@ -554,7 +650,7 @@ class Llama (Character):
             self._screen._window.update()
 
 
-    def shoot_player(self):
+    def shoot_at_player(self):
         # Shoot player if in range
         lx = self._x
         ly = self._y
@@ -567,19 +663,19 @@ class Llama (Character):
             if not (self._x+dx >= 0 and self._x+dx <= LEVEL_WIDTH-1 and self._y+dy >= 0 and self._y+dy <= LEVEL_HEIGHT-1):
                 return
 
-            # Am I facing an unwalkable and unflammable tile?
+            # Am I facing an unwalkable tile?
             f_tile_val = self._screen.tile(self._x+dx,self._y+dy)
-            if f_tile_val in lvl.UNWALKABLES and f_tile_val not in lvl.FLAMMABLES:
+            if f_tile_val in lvl.UNWALKABLES:
                 return 
 
-            # Am I facing a nonflammable object?
+            # Am I facing an unwalkable, nonPlayer object?
             f_obj = self.facing_object()
-            if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
+            if f_obj and not f_obj.is_walkable() and not f_obj.is_player():
                 return
 
-            # Else, shoot fireball
-            Fireball(
-                self._facing, self._fb_range).register(
+            # Else, shoot spitball
+            Spitball(
+                self._facing, self._fb_range, 0).register(
                 self._screen._q, self._fb_speed).materialize(
                 self._screen, self._x+dx, self._y+dy, px, py
             )
@@ -636,7 +732,7 @@ class Rat (Character):
 # The Player character
 #
 class Player (Character):
-    def __init__ (self,name,facing):
+    def __init__ (self,name,facing,health,fb_range,fb_speed):
         Character.__init__(self,name,"Yours truly")
         log("Player.__init__ for "+str(self))
 
@@ -653,8 +749,11 @@ class Player (Character):
         self._inventory = []
         self._inventory_elts = {}
 
-        self._fb_range = 3
-        self._fb_speed = 10
+        self._fb_range = fb_range
+        self._fb_speed = fb_speed
+
+        self._health = health
+
         # config = {}
         # for option in options:
         #     config[option] = DEFAULT_CONFIG[option]
@@ -662,6 +761,25 @@ class Player (Character):
 
     def is_player (self):
         return True
+
+    def die (self):
+        log('Player died, game is lost')
+        t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
+        t.setSize(36)
+        t.setTextColor('red')
+        t.draw(self._screen._window)
+        self._screen._window.getKey()
+        time.sleep(.5)
+        exit(0)
+
+    def hit (self, power):
+        log(str(self)+' gets hit for '+str(power+1))   
+        self._health -= (power + 1)
+
+        # Update health indicator here
+
+        if self._health <= 0:
+            self.die()
 
     def shoot (self):
         # Am I facing the border?
@@ -674,14 +792,14 @@ class Player (Character):
         if f_tile_val in lvl.UNWALKABLES and f_tile_val not in lvl.FLAMMABLES:
             return 
 
-        # Am I facing a nonflammable object?
+        # Am I facing a nonflammable, nonLlama object?
         f_obj = self.facing_object()
-        if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable():
+        if f_obj and not f_obj.is_walkable() and not f_obj.is_flammable() and not f_obj.is_llama():
             return
 
         # Else, shoot fireball
         Fireball(
-            self._facing, self._fb_range).register(
+            self._facing, self._fb_range, 1).register(
             self._screen._q, self._fb_speed).materialize(
             self._screen, self._x+dx, self._y+dy, self._x, self._y
         )
@@ -1073,7 +1191,7 @@ def play_level_0 (window):
 
     q = EventQueue()
 
-    p = Player("...what's your name, bub?...", 'Right')
+    p = Player("...what's your name, bub?...", 'Right', 3, 3, 10)
     px = 4
     py = 10
 
@@ -1086,7 +1204,7 @@ def play_level_0 (window):
     l1x,l1y = (39,43)
     l2x,l2y = (39,45)
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
-    ll = Llama('Left',2,1,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
+    ll = Llama('Left',2,5,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
     create_panel(window)
 

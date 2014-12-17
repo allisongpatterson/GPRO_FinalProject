@@ -10,6 +10,8 @@ AI for llamas
     average: move randomly within area, spit when facing and in range (medium) -- done 12/16
     smart: move towards player when within area, spit when facing and in range (medium/large) -- done 12/16
 health system - JK
+    give player and llamas health -- done 12/17
+    show player health in sidepanel
 usable objects
 pizza object
 progress indicator

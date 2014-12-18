@@ -775,7 +775,7 @@ class Rat (Character):
 # The Player character
 #
 class Player (Character):
-    def __init__ (self,name,facing,health,fb_range,fb_speed):
+    def __init__ (self,name,facing,health,fb_range,fb_speed,fb_power):
         Character.__init__(self,name,"Yours truly")
         log("Player.__init__ for "+str(self))
 
@@ -794,7 +794,9 @@ class Player (Character):
 
         self._fb_range = fb_range
         self._fb_speed = fb_speed
+        self._fb_power = fb_power
 
+        self._max_health = health
         self._health = health
         self._h_obj = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2+40,70),str(health))
         self._h_obj.setSize(16)
@@ -807,6 +809,9 @@ class Player (Character):
 
     def is_player (self):
         return True
+
+    def update_health (self):
+        self._h_obj.setText(str(self._health))
 
     def die (self):
         log('Player died, game is lost')
@@ -822,7 +827,7 @@ class Player (Character):
         log(str(self)+' gets hit for '+str(power+1))   
         self._health -= (power + 1)
 
-        self._h_obj.setText(str(self._health))
+        self.update_health()
 
         if self._health <= 0:
             self.die()
@@ -845,7 +850,7 @@ class Player (Character):
 
         # Else, shoot fireball
         Fireball(
-            self._facing, self._fb_range, 1).register(
+            self._facing, self._fb_range, self._fb_power).register(
             self._screen._q, self._fb_speed).materialize(
             self._screen, self._x+dx, self._y+dy, self._x, self._y
         )
@@ -917,27 +922,28 @@ class Player (Character):
         # Am I facing a Thing?
         thing = self.facing_object()
         if thing:
-            # Black box as a background
-            bg = Rectangle(Point(0,WINDOW_HEIGHT-50), Point(WINDOW_WIDTH,WINDOW_HEIGHT))
-            bg.setOutline('white')
-            bg.setFill('white')
-            bg.draw(self._screen._window)
-            # Description
-            fg = Text(Point(WINDOW_WIDTH/2,WINDOW_HEIGHT-25),thing.description())
-            fg.setSize(16)
-            fg.setFill('black')
-            fg.draw(self._screen._window)
-            # Wait until a key is pressed, then undraw background and description
-            key = self._screen._window.getKey()
-            fg.undraw()
-            bg.undraw()
+            self._screen.show_text(thing.description())
 
             if thing.is_pizza():
                 thing.dematerialize()
 
                 # increase stats
+                self._max_health += 1
+                self._health = self._max_health
+                self.update_health()
+                self._screen.show_text('Health goes up by 1!')
+
+                self._fb_power += 1
+                self._screen.show_text('Fireball power goes up by 1!')
+
+                self._fb_range += 2
+                self._screen.show_text('Fireball range goes up by 2!')
+
+                self._fb_speed -= 3
+                self._screen.show_text('Fireball speed goes up by 3!')                
 
                 # make vortex appear
+                self._screen.show_text('A swirling vortex appears nearby, and you can smell a hint of pepperoni...')
 
 
 
@@ -1115,6 +1121,25 @@ class Screen (object):
     def lower_tile (self, tile):
         tile.canvas.tag_lower(tile.id)
 
+
+    def show_text (self, text):
+        # White box as a background
+        bg = Rectangle(Point(0,WINDOW_HEIGHT-50), Point(WINDOW_WIDTH,WINDOW_HEIGHT))
+        bg.setOutline('white')
+        bg.setFill('white')
+        bg.draw(self._window)
+        # Description
+        fg = Text(Point(WINDOW_WIDTH/2,WINDOW_HEIGHT-25),text)
+        fg.setSize(16)
+        fg.setFill('black')
+        fg.draw(self._window)
+        # Wait until a key is pressed, then undraw background and description
+        key = self._window.getKey()
+        fg.undraw()
+        bg.undraw()
+
+
+
 # A helper function that lets you log information to the console
 # with some timing information. I found this super useful to 
 # debug tricky event-based problems.
@@ -1256,7 +1281,7 @@ def play_level_0 (window):
 
     q = EventQueue()
 
-    p = Player("...what's your name, bub?...", 'Right', 3, 3, 10)
+    p = Player("...what's your name, bub?...", 'Right', 3, 3, 10, 0)
     px = 4
     py = 10
 
@@ -1272,7 +1297,7 @@ def play_level_0 (window):
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
     ll = Llama('Left',2,5,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
-    Pizza('You take back the stolen slice of pizza. A swirling vortex appears nearby...')
+    Pizza('You take back the stolen slice of pizza. You feel your powers increasing.').materialize(scr,45,41)
 
     create_panel(window)
 

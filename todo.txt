@@ -5,25 +5,23 @@ green:
         dead llama detection -- done 12/18
         vortex
         fix sidepanel graphics issues -- done 12/18
-        player health indicator -- done 12/18
-        taking pizza thing
+        player health indicator -- done 12/18 
+        taking pizza thing -- done 12/18
 
 
 yellow:
     next level
-        leveling up of player
+        leveling up of player -- done 12/18
         new design
         situational inventory
+
+    audio
 
 
 
 red:
     complete inventory
     more than 2 levels
-
-
-
-
 
 
 

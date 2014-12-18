@@ -1,8 +1,8 @@
 ############################################################
 #
-# Olinland Redux
+# Pizza Quest
 #
-# Scaffolding to the final project for Game Programming
+# Jacob Kingery and Allison Patterson
 #
 #
 
@@ -82,6 +82,9 @@ class Root (object):
 
     # is this object pizza?
     def is_pizza (self):
+        return False
+
+    def is_vortex (self):
         return False
 
 
@@ -187,6 +190,11 @@ class Thing (Root):
         self._screen.delete(self)
         return self
 
+    def register (self,q,freq):
+        self._freq = freq
+        q.enqueue(freq,self)
+        return self
+
     def burn (self):
         # llama stuff...
         
@@ -239,10 +247,6 @@ class Projectile (Thing):
         self._walkable = True
 
 
-    def register (self,q,freq):
-        self._freq = freq
-        q.enqueue(freq,self)
-        return self
 
     def event (self,q):
         log("event for "+str(self))
@@ -327,6 +331,7 @@ class Projectile (Thing):
 
         # Not done moving yet
         return False
+
 
 class Fireball (Projectile):
     def __init__ (self, facing, mrange, power):
@@ -472,6 +477,44 @@ class Pizza (Thing):
     def is_pizza (self):
         return True
 
+class Vortex (Thing):
+    def __init__ (self):
+        Thing.__init__(self,"Vortex",'Where does it lead?')
+        self._IMGS = {
+            0: '1_vortex.gif',
+            1: '2_vortex.gif',
+            2: '3_vortex.gif',
+            3: '4_vortex.gif'
+        }
+        self._state = 0;
+        pic = self._IMGS[0]
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+
+    def is_vortex (self):
+        return True
+
+    def event (self,q):
+        log("event for "+str(self))
+
+        # cycle amongst the 4 states
+        self._state = (self._state+1) % 4
+
+        # draw new state
+        p = self._screen._player
+        self._sprite.undraw()
+        pic = self._IMGS[self._state]
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        self._sprite.move((self._x-(p._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                           (self._y-(p._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+        self._sprite.draw(self._screen._window)
+        self.raise_or_lower_sprite() # So that sprite doesn't show up over the sidepanel 
+
+        # Update window so changes are visible
+        self._screen._window.update()
+
+        # re-register event
+        self.register(q,self._freq)
+
 
 #
 # Example of a kind of thing with its specific sprite
@@ -498,11 +541,6 @@ class Character (Thing):
         rect.setFill("red")
         rect.setOutline("red")
         self._sprite = rect
-
-    def register (self,q,freq):
-        self._freq = freq
-        q.enqueue(freq,self)
-        return self
 
     def turn (self,dx,dy):
         return False
@@ -944,6 +982,12 @@ class Player (Character):
 
                 # make vortex appear
                 self._screen.show_text('A swirling vortex appears nearby, and you can smell a hint of pepperoni...')
+                Vortex().register(self._screen._q,20).materialize(self._screen,48,48)
+
+            if thing.is_vortex():
+                self._screen.show_text('You feel the next slice of pizza calling to you through the vortex.')
+                self._screen.show_text('You take a deep breath and step through.')
+                self._screen._DONE = True;
 
 
 
@@ -1023,6 +1067,7 @@ class Screen (object):
         self._things = []
         self.initial_llamas = []
         self.ded_llamas = []
+        self._DONE = False
 
 
         # Out-of-bounds is black
@@ -1307,11 +1352,24 @@ def play_level_0 (window):
 
     # print scr._things
 
-    while True:
+    while not scr._DONE:
         # Grab the next event from the queue if it's ready
         q.dequeue_if_ready()
         # Time unit = 10 milliseconds
         time.sleep(0.01)
+
+    bg = Rectangle(Point(0,0),Point(TILE_SIZE*(LEVEL_WIDTH),TILE_SIZE*(LEVEL_HEIGHT)))
+    bg.setFill('black')
+    bg.setOutline('black')
+    bg.draw(window)
+
+    t = Text(Point(WINDOW_WIDTH/2,WINDOW_HEIGHT/2),'to be continued...')
+    t.setSize(36)
+    t.setTextColor('white')
+    t.draw(window)
+    window.getKey()
+    time.sleep(.5)
+    exit(0)
 
 
 def main ():

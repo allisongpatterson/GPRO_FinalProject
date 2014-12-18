@@ -33,6 +33,9 @@ WINDOW_HEIGHT = TILE_SIZE * VIEWPORT_HEIGHT
 WINDOW_RIGHTPANEL = 200
 
 
+
+
+
 #############################################################
 # 
 # The class hierarchy for objects that you can interact with
@@ -176,6 +179,9 @@ class Thing (Root):
         return self
 
     def burn (self):
+        # llama stuff...
+        
+
         # Change sprite to ash pile
         pic = 'ash.gif'
         self._sprite.undraw()
@@ -210,6 +216,9 @@ class Thing (Root):
 
     def is_burnt (self):
         return self._burnt
+
+    def is_barricade_door (self):
+        return False
 
 class Projectile (Thing):
     def __init__ (self, facing, mrange, power):
@@ -435,6 +444,14 @@ class Door (Thing):
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         self._flammable = True
 
+class BarricadeDoor(Thing):
+    def __init__ (self,description):
+        Thing.__init__(self,"Barricade Door",description)
+        pic = 'V_barricade.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+
+    def is_barricade_door (self):
+        return True
 
 #
 # Example of a kind of thing with its specific sprite
@@ -532,6 +549,7 @@ class Llama (Character):
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
+
     def is_llama (self):
         return True
 
@@ -540,7 +558,12 @@ class Llama (Character):
         self._health -= (power + 1)
 
         if self._health <= 0:
+            self._screen.ded_llamas.append(self)
             self.burn()
+            if self._screen.initial_llamas == self._screen.ded_llamas:
+                for thing in self._screen._things:
+                    if thing.is_barricade_door():
+                        thing.dematerialize()
 
     def event (self,q):
         log("event for "+str(self))
@@ -968,6 +991,7 @@ class Level (object):
 # You'll DEFINITELY want to add methods to this class. 
 # Like, a lot of them.
 #
+
 class Screen (object):
     def __init__ (self,level,window,q,p,cx,cy):
         self._q = q
@@ -978,6 +1002,10 @@ class Screen (object):
         self._cy = cy    #  of the screen
         self._map_elts = {}
         self._things = []
+        self.initial_llamas = []
+        self.ded_llamas = []
+
+
         # Out-of-bounds is black
         out = Rectangle(Point(0,0),Point(WINDOW_WIDTH,WINDOW_HEIGHT))
         out.setFill("black")
@@ -1034,6 +1062,9 @@ class Screen (object):
         # WRITE ME!   You'll have to figure out how to manage these
         # because chances are when you scroll these will not move!
         self._things.append(item)
+
+        if item.is_llama():
+            self.initial_llamas.append(item)
 
     def delete (self,item):
         item.sprite().undraw()
@@ -1185,6 +1216,7 @@ def sign (x):
 # changes
 #
 
+
 def play_level_0 (window):
     level = Level(0)
     log ("level created")
@@ -1199,6 +1231,7 @@ def play_level_0 (window):
     log ("screen created")
 
     Door("a dry, wooden door with no doorknob").materialize(scr,11,10)
+    BarricadeDoor("the front door of the llamas' spikey fortress").materialize(scr,40,44)
     Felix("Help!").materialize(scr,12,9)
 
     l1x,l1y = (39,43)
@@ -1206,11 +1239,16 @@ def play_level_0 (window):
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
     ll = Llama('Left',2,5,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
+    # LLAMAS[l] = True
+    # LLAMAS[ll] = True
+
     create_panel(window)
 
     p.materialize(scr,px,py)
 
     q.enqueue(1,CheckInput(window,p))
+
+    # print scr._things
 
     while True:
         # Grab the next event from the queue if it's ready

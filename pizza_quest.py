@@ -4,7 +4,12 @@
 #
 # Jacob Kingery and Allison Patterson
 #
-#
+# Future work:
+# More levels!
+# Using the implemented inventory system to advance the storyline (block up obstructions with explosives, etc.)
+# Adding other items (such as health restoratives)
+# Add sound effects
+# 
 
 import time
 import random
@@ -31,10 +36,6 @@ WINDOW_HEIGHT = TILE_SIZE * VIEWPORT_HEIGHT
 
 # Pixel size of the panel on the right where you can display stuff
 WINDOW_RIGHTPANEL = 200
-
-
-
-
 
 #############################################################
 # 
@@ -1386,3 +1387,4 @@ def main ():
 
 if __name__ == '__main__':
     main()
+    

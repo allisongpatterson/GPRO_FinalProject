@@ -3,11 +3,10 @@ TODO:
 green:
     complete level 0
         dead llama detection -- done 12/18
-        vortex
+        vortex -- done 12/18
         fix sidepanel graphics issues -- done 12/18
         player health indicator -- done 12/18 
         taking pizza thing -- done 12/18
-
 
 yellow:
     next level
@@ -16,8 +15,6 @@ yellow:
         situational inventory
 
     audio
-
-
 
 red:
     complete inventory
@@ -29,26 +26,24 @@ red:
 1 level
     background tiles -- done 12/15
     foreground objects -- done 12/15
-    opening blocked area when llamas are ded - AP
-    vortex
+    opening blocked area when llamas are ded -- done 12/18
+    vortex -- done 12/18
 AI for llamas
     dumb: (sometimes) turn in place, spit when facing and in range (short) -- done 12/15
     average: move randomly within area, spit when facing and in range (medium) -- done 12/16
     smart: move towards player when within area, spit when facing and in range (medium/large) -- done 12/16
-health system - JK
+health system
     give player and llamas health -- done 12/17
-    show player health in sidepanel
+    show player health in sidepanel -- done (as text) 12/18
 usable objects
-pizza object
+pizza object -- done 12/18
 progress indicator
 inventory selector
 moar levelssssss
 
 being able to fire when right next to a flammable tile -- done 12/16
 
-make it into an event queue function - AP
-    ashes that used to be tiles going over the right sidepanel
-
+ashes that used to be tiles going over the right sidepanel -- done 12/16
 
 check out the projectiles going over the right sidepanel -- done 12/14
 ash piles also go over the right sidepanel -- done 12/14

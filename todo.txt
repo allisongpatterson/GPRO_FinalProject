@@ -5,7 +5,7 @@ green:
         dead llama detection -- done 12/18
         vortex
         fix sidepanel graphics issues -- done 12/18
-        player health indicator - JK
+        player health indicator -- done 12/18
         taking pizza thing
 
 

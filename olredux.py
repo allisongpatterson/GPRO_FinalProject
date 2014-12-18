@@ -80,6 +80,10 @@ class Root (object):
     def is_flammable (self):
         return False
 
+    # is this object pizza?
+    def is_pizza (self):
+        return False
+
 
 # A thing is something that can be interacted with and by default
 # is not moveable or walkable over
@@ -172,6 +176,11 @@ class Thing (Root):
         self._screen = screen
         self._x = x
         self._y = y
+
+        if self.is_player():
+            # display health indicator
+            self._h_obj.draw(self._screen._window) 
+
         return self
 
     def dematerialize (self):
@@ -453,6 +462,16 @@ class BarricadeDoor(Thing):
 
     def is_barricade_door (self):
         return True
+
+class Pizza (Thing):
+    def __init__ (self,description):
+        Thing.__init__(self,"Pizza Slice",description)
+        pic = 'pizza.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+
+    def is_pizza (self):
+        return True
+
 
 #
 # Example of a kind of thing with its specific sprite
@@ -777,6 +796,9 @@ class Player (Character):
         self._fb_speed = fb_speed
 
         self._health = health
+        self._h_obj = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2+40,70),str(health))
+        self._h_obj.setSize(16)
+        self._h_obj.setFill("blue")
 
         # config = {}
         # for option in options:
@@ -800,7 +822,7 @@ class Player (Character):
         log(str(self)+' gets hit for '+str(power+1))   
         self._health -= (power + 1)
 
-        # Update health indicator here
+        self._h_obj.setText(str(self._health))
 
         if self._health <= 0:
             self.die()
@@ -873,19 +895,6 @@ class Player (Character):
         # Update window so changes are visible
         self._screen._window.update()
 
-    # def facing_object (self):
-    #     dx,dy = MOVE[self._facing]
-    #     tx = self._x + dx
-    #     ty = self._y + dy
-
-    #     # Am I facing a Thing?
-    #     for thing in self._screen._things:
-    #         if (thing.position() == (tx,ty)):
-    #             return thing
-
-    #     return False
-
-
     def take (self):
         dx,dy = MOVE[self._facing]
         tx = self._x + dx
@@ -904,23 +913,23 @@ class Player (Character):
             fg.draw(self._screen._window)
             self._inventory_elts[inv_num] = fg
 
-
-    def examine (self):
-        dx,dy = MOVE[self._facing]
-        tx = self._x + dx
-        ty = self._y + dy
+    def interact (self):
+        # dx,dy = MOVE[self._facing]
+        # tx = self._x + dx
+        # ty = self._y + dy
 
         # Am I facing a Thing?
         thing = self.facing_object()
         if thing:
             # Black box as a background
             bg = Rectangle(Point(0,WINDOW_HEIGHT-50), Point(WINDOW_WIDTH,WINDOW_HEIGHT))
-            bg.setFill('black')
+            bg.setOutline('white')
+            bg.setFill('white')
             bg.draw(self._screen._window)
             # Description
             fg = Text(Point(WINDOW_WIDTH/2,WINDOW_HEIGHT-25),thing.description())
             fg.setSize(16)
-            fg.setFill("white")
+            fg.setFill('black')
             fg.draw(self._screen._window)
             # Wait until a key is pressed, then undraw background and description
             key = self._screen._window.getKey()
@@ -1187,7 +1196,7 @@ class CheckInput (object):
         if key == 'f':
             self._player.take()
         if key == 'e':
-            self._player.examine()
+            self._player.interact()
         if key == 'space':
             self._player.shoot()
         q.enqueue(1,self)
@@ -1208,12 +1217,17 @@ def create_panel (window):
     fg.setFill("red")
     fg.draw(window)
 
-    fg = Text(Point(WINDOW_WIDTH+100,60),'Inventory')
+    fg = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2,70),'Health:  ')
+    fg.setSize(16)
+    fg.setFill("blue")
+    fg.draw(window)    
+
+    fg = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2,100),'Inventory')
     fg.setSize(16)
     fg.setFill("white")
     fg.draw(window)
 
-    fg = Text(Point(WINDOW_WIDTH+100,60),'________')
+    fg = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2,100),'________')
     fg.setSize(16)
     fg.setFill("white")
     fg.draw(window)

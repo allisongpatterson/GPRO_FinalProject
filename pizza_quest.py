@@ -1335,7 +1335,7 @@ def play_level_0 (window):
 
     Door("a dry, wooden door with no doorknob").materialize(scr,11,10)
     BarricadeDoor("the front door of the llamas' spikey fortress").materialize(scr,40,44)
-    Felix("Help!").materialize(scr,12,9)
+    Felix("Halp! Bad llamas haz take my nommy pizza! They go path!").materialize(scr,12,9)
 
     l1x,l1y = (39,43)
     l2x,l2y = (39,45)

@@ -293,9 +293,9 @@ class Projectile (Thing):
             log(str(self)+' stopping at unwalkable, unflammable Thing')
             return stop_now()
 
-        # On a flammable Thing?
+        # On an alive Llama?
         o_obj = self.on_object()
-        if o_obj and o_obj.is_llama():
+        if o_obj and o_obj.is_llama() and not o_obj.is_burnt():
             log(str(self)+' stopping on Llama')
             return stop_now()
 
@@ -337,24 +337,25 @@ class Fireball (Projectile):
         self._range = 0
         o_obj = self.on_object()
         o_tile = self._screen.tile(self._x,self._y)
-        if o_obj and o_obj.is_flammable():
-            o_obj.burn()
-        elif o_obj and o_obj.is_llama():
-            o_obj.hit(self._power)
-        elif o_tile in lvl.FLAMMABLES:
-            elt = self._screen.tile_object(self._x,self._y)
-            elt.undraw()
-            pic = 'ash.gif'
-            elt = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
-            elt.move((self._x-(self._screen._player._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
-                     (self._y-(self._screen._player._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
-            elt.draw(self._screen._window)
+        if not o_obj.is_burnt():
+            if o_obj and o_obj.is_flammable():
+                o_obj.burn()
+            elif o_obj and o_obj.is_llama():
+                o_obj.hit(self._power)
+            elif o_tile in lvl.FLAMMABLES:
+                elt = self._screen.tile_object(self._x,self._y)
+                elt.undraw()
+                pic = 'ash.gif'
+                elt = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+                elt.move((self._x-(self._screen._player._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                         (self._y-(self._screen._player._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+                elt.draw(self._screen._window)
 
-            tile_pos = self._screen._level._pos(self._x,self._y)
-            self._screen._level._map[tile_pos] = 0000
-            self._screen._map_elts[tile_pos] = elt
+                tile_pos = self._screen._level._pos(self._x,self._y)
+                self._screen._level._map[tile_pos] = 0000
+                self._screen._map_elts[tile_pos] = elt
 
-            self._screen._player.raise_sprite()
+                self._screen._player.raise_sprite()
 
         # Dematerialize projectile
         self.dematerialize()

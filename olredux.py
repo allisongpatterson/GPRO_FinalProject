@@ -80,6 +80,10 @@ class Root (object):
     def is_flammable (self):
         return False
 
+    # is this object pizza?
+    def is_pizza (self):
+        return False
+
 
 # A thing is something that can be interacted with and by default
 # is not moveable or walkable over
@@ -172,6 +176,11 @@ class Thing (Root):
         self._screen = screen
         self._x = x
         self._y = y
+
+        if self.is_player():
+            # display health indicator
+            self._h_obj.draw(self._screen._window) 
+
         return self
 
     def dematerialize (self):
@@ -293,9 +302,9 @@ class Projectile (Thing):
             log(str(self)+' stopping at unwalkable, unflammable Thing')
             return stop_now()
 
-        # On a flammable Thing?
+        # On an alive Llama?
         o_obj = self.on_object()
-        if o_obj and o_obj.is_llama():
+        if o_obj and o_obj.is_llama() and not o_obj.is_burnt():
             log(str(self)+' stopping on Llama')
             return stop_now()
 
@@ -337,24 +346,25 @@ class Fireball (Projectile):
         self._range = 0
         o_obj = self.on_object()
         o_tile = self._screen.tile(self._x,self._y)
-        if o_obj and o_obj.is_flammable():
-            o_obj.burn()
-        elif o_obj and o_obj.is_llama():
-            o_obj.hit(self._power)
-        elif o_tile in lvl.FLAMMABLES:
-            elt = self._screen.tile_object(self._x,self._y)
-            elt.undraw()
-            pic = 'ash.gif'
-            elt = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
-            elt.move((self._x-(self._screen._player._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
-                     (self._y-(self._screen._player._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
-            elt.draw(self._screen._window)
+        if not o_obj.is_burnt():
+            if o_obj and o_obj.is_flammable():
+                o_obj.burn()
+            elif o_obj and o_obj.is_llama():
+                o_obj.hit(self._power)
+            elif o_tile in lvl.FLAMMABLES:
+                elt = self._screen.tile_object(self._x,self._y)
+                elt.undraw()
+                pic = 'ash.gif'
+                elt = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+                elt.move((self._x-(self._screen._player._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
+                         (self._y-(self._screen._player._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
+                elt.draw(self._screen._window)
 
-            tile_pos = self._screen._level._pos(self._x,self._y)
-            self._screen._level._map[tile_pos] = 0000
-            self._screen._map_elts[tile_pos] = elt
+                tile_pos = self._screen._level._pos(self._x,self._y)
+                self._screen._level._map[tile_pos] = 0000
+                self._screen._map_elts[tile_pos] = elt
 
-            self._screen._player.raise_sprite()
+                self._screen._player.raise_sprite()
 
         # Dematerialize projectile
         self.dematerialize()
@@ -452,6 +462,16 @@ class BarricadeDoor(Thing):
 
     def is_barricade_door (self):
         return True
+
+class Pizza (Thing):
+    def __init__ (self,description):
+        Thing.__init__(self,"Pizza Slice",description)
+        pic = 'pizza.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+
+    def is_pizza (self):
+        return True
+
 
 #
 # Example of a kind of thing with its specific sprite
@@ -560,7 +580,7 @@ class Llama (Character):
         if self._health <= 0:
             self._screen.ded_llamas.append(self)
             self.burn()
-            if self._screen.initial_llamas == self._screen.ded_llamas:
+            if set(self._screen.initial_llamas) == set(self._screen.ded_llamas):
                 for thing in self._screen._things:
                     if thing.is_barricade_door():
                         thing.dematerialize()
@@ -776,6 +796,9 @@ class Player (Character):
         self._fb_speed = fb_speed
 
         self._health = health
+        self._h_obj = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2+40,70),str(health))
+        self._h_obj.setSize(16)
+        self._h_obj.setFill("blue")
 
         # config = {}
         # for option in options:
@@ -787,7 +810,7 @@ class Player (Character):
 
     def die (self):
         log('Player died, game is lost')
-        t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
+        t = Text(Point(WINDOW_WIDTH/2,WINDOW_HEIGHT/2),'YOU LOST!')
         t.setSize(36)
         t.setTextColor('red')
         t.draw(self._screen._window)
@@ -799,7 +822,7 @@ class Player (Character):
         log(str(self)+' gets hit for '+str(power+1))   
         self._health -= (power + 1)
 
-        # Update health indicator here
+        self._h_obj.setText(str(self._health))
 
         if self._health <= 0:
             self.die()
@@ -872,19 +895,6 @@ class Player (Character):
         # Update window so changes are visible
         self._screen._window.update()
 
-    # def facing_object (self):
-    #     dx,dy = MOVE[self._facing]
-    #     tx = self._x + dx
-    #     ty = self._y + dy
-
-    #     # Am I facing a Thing?
-    #     for thing in self._screen._things:
-    #         if (thing.position() == (tx,ty)):
-    #             return thing
-
-    #     return False
-
-
     def take (self):
         dx,dy = MOVE[self._facing]
         tx = self._x + dx
@@ -899,32 +909,35 @@ class Player (Character):
 
             fg = Text(Point(WINDOW_WIDTH+100,90+25*inv_num),thing.name())
             fg.setSize(16)
-            fg.setFill("white")
+            fg.setFill('white')
             fg.draw(self._screen._window)
             self._inventory_elts[inv_num] = fg
 
-
-    def examine (self):
-        dx,dy = MOVE[self._facing]
-        tx = self._x + dx
-        ty = self._y + dy
-
+    def interact (self):
         # Am I facing a Thing?
         thing = self.facing_object()
         if thing:
             # Black box as a background
             bg = Rectangle(Point(0,WINDOW_HEIGHT-50), Point(WINDOW_WIDTH,WINDOW_HEIGHT))
-            bg.setFill('black')
+            bg.setOutline('white')
+            bg.setFill('white')
             bg.draw(self._screen._window)
             # Description
             fg = Text(Point(WINDOW_WIDTH/2,WINDOW_HEIGHT-25),thing.description())
             fg.setSize(16)
-            fg.setFill("white")
+            fg.setFill('black')
             fg.draw(self._screen._window)
             # Wait until a key is pressed, then undraw background and description
             key = self._screen._window.getKey()
             fg.undraw()
             bg.undraw()
+
+            if thing.is_pizza():
+                thing.dematerialize()
+
+                # increase stats
+
+                # make vortex appear
 
 
 
@@ -967,7 +980,7 @@ class Level (object):
     def _pos (self,x,y):
         return x + (y*LEVEL_WIDTH);
 
-    # return the tile at a given tile position in the level
+    # return the tile value at a given tile position in the level
     def tile (self,x,y):
         return self._map[self._pos(x,y)]
 
@@ -1029,20 +1042,12 @@ class Screen (object):
 
                 pic = lvl.SPRITES[cell]
                 elt = Image(Point(sx-dx+TILE_SIZE/2, sy-dy+TILE_SIZE/2), pic)
-                # elt = Rectangle(Point(sx-dx,sy-dy),
-                #                 Point(sx-dx+TILE_SIZE,sy-dy+TILE_SIZE))
 
-                # if cell == 1:
-                #     elt.setFill('green')
-                #     elt.setOutline('green')
-                # elif cell == 2:
-                #     elt.setFill('sienna')
-                #     elt.setOutline('sienna')
                 elt.draw(window)
 
                 self._map_elts[ind] = elt
 
-    # return the tile at a given tile position
+    # return the tile value at a given tile position
     def tile (self,x,y):
         return self._level.tile(x,y)
 
@@ -1059,8 +1064,7 @@ class Screen (object):
         item.sprite().move((x-(cx-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
                            (y-(cy-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
         item.sprite().draw(self._window)
-        # WRITE ME!   You'll have to figure out how to manage these
-        # because chances are when you scroll these will not move!
+        # then, add to list of all objects
         self._things.append(item)
 
         if item.is_llama():
@@ -1076,16 +1080,40 @@ class Screen (object):
 
     # shift viewport when player moves
     def shift_viewport (self, dx, dy):
+        # Move tiles in the specified direction
         for key in self._map_elts:
-            # Move screen in the specified direction
-            self._map_elts[key].move(dx*TILE_SIZE,dy*TILE_SIZE)
+            tile = self._map_elts[key]
+            tile.move(dx*TILE_SIZE,dy*TILE_SIZE)
+            
+            # Push down if over right sidepanel
+            if key > -1:
+                self.raise_or_lower_tile(key)
+
+        # Move Things as well so they appear to not move
         for thing in self._things:
-            # Move Things as well so they appear to not move
             if not thing.is_player():
                 thing.shift(dx*TILE_SIZE,dy*TILE_SIZE)
 
    
+    def raise_or_lower_tile (self, ind):
+        p = self._player
+        tile_x,tile_y = self._level.ind_to_pos(ind)
+        tile_x = tile_x/TILE_SIZE
+        tile_y = tile_y/TILE_SIZE
 
+        tile = self.tile_object(tile_x,tile_y)
+        x_dist = tile_x - p._x
+        if x_dist > (VIEWPORT_WIDTH-1)/2:
+            self.lower_tile(tile)
+        else:
+            self.raise_tile(tile)
+            p.raise_sprite()
+
+    def raise_tile (self, tile):
+        tile.canvas.tag_raise(tile.id)
+
+    def lower_tile (self, tile):
+        tile.canvas.tag_lower(tile.id)
 
 # A helper function that lets you log information to the console
 # with some timing information. I found this super useful to 
@@ -1171,7 +1199,7 @@ class CheckInput (object):
         if key == 'f':
             self._player.take()
         if key == 'e':
-            self._player.examine()
+            self._player.interact()
         if key == 'space':
             self._player.shoot()
         q.enqueue(1,self)
@@ -1192,12 +1220,17 @@ def create_panel (window):
     fg.setFill("red")
     fg.draw(window)
 
-    fg = Text(Point(WINDOW_WIDTH+100,60),'Inventory')
+    fg = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2,70),'Health:  ')
+    fg.setSize(16)
+    fg.setFill("blue")
+    fg.draw(window)    
+
+    fg = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2,100),'Inventory')
     fg.setSize(16)
     fg.setFill("white")
     fg.draw(window)
 
-    fg = Text(Point(WINDOW_WIDTH+100,60),'________')
+    fg = Text(Point(WINDOW_WIDTH+WINDOW_RIGHTPANEL/2,100),'________')
     fg.setSize(16)
     fg.setFill("white")
     fg.draw(window)
@@ -1239,8 +1272,7 @@ def play_level_0 (window):
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
     ll = Llama('Left',2,5,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
-    # LLAMAS[l] = True
-    # LLAMAS[ll] = True
+    Pizza('You take back the stolen slice of pizza. A swirling vortex appears nearby...')
 
     create_panel(window)
 

@@ -580,7 +580,7 @@ class Llama (Character):
         if self._health <= 0:
             self._screen.ded_llamas.append(self)
             self.burn()
-            if self._screen.initial_llamas == self._screen.ded_llamas:
+            if set(self._screen.initial_llamas) == set(self._screen.ded_llamas):
                 for thing in self._screen._things:
                     if thing.is_barricade_door():
                         thing.dematerialize()
@@ -909,15 +909,11 @@ class Player (Character):
 
             fg = Text(Point(WINDOW_WIDTH+100,90+25*inv_num),thing.name())
             fg.setSize(16)
-            fg.setFill("white")
+            fg.setFill('white')
             fg.draw(self._screen._window)
             self._inventory_elts[inv_num] = fg
 
     def interact (self):
-        # dx,dy = MOVE[self._facing]
-        # tx = self._x + dx
-        # ty = self._y + dy
-
         # Am I facing a Thing?
         thing = self.facing_object()
         if thing:
@@ -935,6 +931,13 @@ class Player (Character):
             key = self._screen._window.getKey()
             fg.undraw()
             bg.undraw()
+
+            if thing.is_pizza():
+                thing.dematerialize()
+
+                # increase stats
+
+                # make vortex appear
 
 
 
@@ -1269,8 +1272,7 @@ def play_level_0 (window):
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
     ll = Llama('Left',2,5,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
-    # LLAMAS[l] = True
-    # LLAMAS[ll] = True
+    Pizza('You take back the stolen slice of pizza. A swirling vortex appears nearby...')
 
     create_panel(window)
 

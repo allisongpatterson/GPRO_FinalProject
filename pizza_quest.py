@@ -378,8 +378,8 @@ class Fireball (Projectile):
 class Spitball (Projectile):
     def __init__ (self, facing, mrange, power):
         Projectile.__init__(self, facing, mrange, power)
-        imgs = [{'Left': 'W_fireball.gif','Right': 'E_fireball.gif','Up' : 'N_fireball.gif','Down' : 'S_fireball.gif'},
-            {'Left': 'W_big_fireball.gif','Right': 'E_big_fireball.gif','Up' : 'N_big_fireball.gif','Down' : 'S_big_fireball.gif'}
+        imgs = [{'Left': 'W_spit.gif','Right': 'E_spit.gif','Up' : 'N_spit.gif','Down' : 'S_spit.gif'},
+            {'Left': 'W_spit.gif','Right': 'E_spit.gif','Up' : 'N_spit.gif','Down' : 'S_spit.gif'}
         ]
         self._DIR_IMGS = imgs[power]
         self._facing = facing
@@ -596,7 +596,7 @@ class Llama (Character):
         self._intelligence = intelligence
         self._fb_range = 2
         self._fb_speed = 15
-        self._wander_range = 5
+        self._wander_range = 7
         self._DIR_IMGS = {
             'Left': 'W_llama.gif',
             'Right': 'E_llama.gif',
@@ -630,25 +630,25 @@ class Llama (Character):
             if self._intelligence == 0:
                 # If dumb llama: stand in place, spit if player 
                 # is in front of you and within range.
-                if random.randrange(6) == 0:
+                if random.randrange(4) == 0:
                     self.face_player()
-                elif random.randrange(6) == 0:
+                elif random.randrange(3) == 0:
                     self.shoot_at_player()
             elif self._intelligence == 1:
                 # If average llama: move randomly within range, 
                 # spit if player is in front of you and within range.
-                if random.randrange(6) == 0:
+                if random.randrange(3) == 0:
                     dx,dy = random.choice(MOVE.values())
                     if abs(self._x+dx-self._ax) < self._wander_range and abs(self._y+dy-self._ay) < self._wander_range:
                         # If still within wander range, move
                         self.move(dx,dy)
-                elif random.randrange(4) == 0:
+                elif random.randrange(3) == 0:
                     self.shoot_at_player()
             elif self._intelligence == 2:
                 # If smart llama: move towards player if they get 
                 # within <x> tiles of you, spit if player is in 
                 #front of you and within range.
-                if random.randrange(6) == 0:
+                if random.randrange(3) == 0:
                     self.move_towards_player()
                 elif random.randrange(2) == 0:
                     self.shoot_at_player()
@@ -1335,12 +1335,13 @@ def play_level_0 (window):
 
     Door("a dry, wooden door with no doorknob").materialize(scr,11,10)
     BarricadeDoor("the front door of the llamas' spikey fortress").materialize(scr,40,44)
+
     Felix("Halp! Bad llamas haz take my nommy pizza! They go path!").materialize(scr,12,9)
 
     l1x,l1y = (39,43)
     l2x,l2y = (39,45)
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
-    ll = Llama('Left',2,5,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
+    ll = Llama('Left',2,3,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
     Pizza('You take back the stolen slice of pizza. You feel your powers increasing.').materialize(scr,45,41)
 

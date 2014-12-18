@@ -33,9 +33,6 @@ WINDOW_HEIGHT = TILE_SIZE * VIEWPORT_HEIGHT
 WINDOW_RIGHTPANEL = 200
 
 
-
-
-
 #############################################################
 # 
 # The class hierarchy for objects that you can interact with
@@ -179,9 +176,6 @@ class Thing (Root):
         return self
 
     def burn (self):
-        # llama stuff...
-        
-
         # Change sprite to ash pile
         pic = 'ash.gif'
         self._sprite.undraw()
@@ -205,6 +199,9 @@ class Thing (Root):
     def is_thing (self):
         return True
 
+    def is_fake_thing(self):
+        return False
+
     def is_walkable (self):
         return self._walkable
 
@@ -217,8 +214,50 @@ class Thing (Root):
     def is_burnt (self):
         return self._burnt
 
-    def is_barricade_door (self):
-        return False
+class AshTile (Thing): # an object created (and materialized) when a tile is burnt
+    def __init__ (self, name, desc):
+        Thing.__init__(self, name,desc)
+        self._walkable = True
+        pic = 'ash.gif'
+        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
+        # self._sprite.draw(self._screen._window)
+        log("Thing.__init__ for "+str(self))
+
+    def is_fake_thing(self):
+        return True
+
+    def materialize (self,screen,x,y,cx=-1,cy=-1):
+        if (cx != -1) and (cy != -1):
+            screen.add(self,x,y,cx,cy)
+        else:
+            screen.add(self,x,y)
+        self._screen = screen
+        self._x = x
+        self._y = y
+        return self
+
+    def register (self,q,freq):
+        self._freq = freq
+        q.enqueue(freq,self)
+        return self
+
+    def event (self,q):
+        self.register(q,100)
+    #     log("event for "+str(self))
+    #     p = self._screen._player
+    #     x_dist = self._x - p._x
+    #     if x_dist < (VIEWPORT_WIDTH-1)/2:
+    #         # self.lower_sprite()
+    #         self._sprite.undraw()
+    #         print 'howdy'
+    #     # else:
+    #     #     self.raise_sprite()
+    #     #     p.raise_sprite()
+    #     # self.raise_or_lower_sprite()
+    #         self.register(q,100)
+    #     print 'hey'
+
+
 
 class Projectile (Thing):
     def __init__ (self, facing, mrange, power):
@@ -342,18 +381,20 @@ class Fireball (Projectile):
         elif o_obj and o_obj.is_llama():
             o_obj.hit(self._power)
         elif o_tile in lvl.FLAMMABLES:
+            # get rid of the old sprite
             elt = self._screen.tile_object(self._x,self._y)
             elt.undraw()
-            pic = 'ash.gif'
-            elt = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
-            elt.move((self._x-(self._screen._player._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
-                     (self._y-(self._screen._player._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
-            elt.draw(self._screen._window)
 
+            # change the tile's value in the level array
             tile_pos = self._screen._level._pos(self._x,self._y)
             self._screen._level._map[tile_pos] = 0000
-            self._screen._map_elts[tile_pos] = elt
+            # create the new pile of ashes where it belongs
+            ashes = AshTile('some ashes','some charred scenery').materialize(self._screen,self._x,self._y)# (self._screen, self._screen._cx - (self._screen._player._x - VIEWPORT_WIDTH + 1), self._screen._cy - (self._screen._player._y-((VIEWPORT_WIDTH-1)/2))-2)
+            # elt = ashes
+            # self._screen._map_elts[tile_pos] = elt
 
+
+            # make sure player is still on top
             self._screen._player.raise_sprite()
 
         # Dematerialize projectile
@@ -440,18 +481,10 @@ class Spitball (Projectile):
 class Door (Thing):
     def __init__ (self,description):
         Thing.__init__(self,'Door',description)
-        pic = 'pizza.gif'#'V_door.gif'
+        pic = 'V_door.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         self._flammable = True
 
-class BarricadeDoor(Thing):
-    def __init__ (self,description):
-        Thing.__init__(self,"Barricade Door",description)
-        pic = 'V_barricade.gif'
-        self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
-
-    def is_barricade_door (self):
-        return True
 
 #
 # Example of a kind of thing with its specific sprite
@@ -549,7 +582,6 @@ class Llama (Character):
         pic = self._DIR_IMGS[self._facing]
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
-
     def is_llama (self):
         return True
 
@@ -558,12 +590,7 @@ class Llama (Character):
         self._health -= (power + 1)
 
         if self._health <= 0:
-            self._screen.ded_llamas.append(self)
             self.burn()
-            if self._screen.initial_llamas == self._screen.ded_llamas:
-                for thing in self._screen._things:
-                    if thing.is_barricade_door():
-                        thing.dematerialize()
 
     def event (self,q):
         log("event for "+str(self))
@@ -991,7 +1018,6 @@ class Level (object):
 # You'll DEFINITELY want to add methods to this class. 
 # Like, a lot of them.
 #
-
 class Screen (object):
     def __init__ (self,level,window,q,p,cx,cy):
         self._q = q
@@ -1002,10 +1028,6 @@ class Screen (object):
         self._cy = cy    #  of the screen
         self._map_elts = {}
         self._things = []
-        self.initial_llamas = []
-        self.ded_llamas = []
-
-
         # Out-of-bounds is black
         out = Rectangle(Point(0,0),Point(WINDOW_WIDTH,WINDOW_HEIGHT))
         out.setFill("black")
@@ -1062,9 +1084,7 @@ class Screen (object):
         # WRITE ME!   You'll have to figure out how to manage these
         # because chances are when you scroll these will not move!
         self._things.append(item)
-
-        if item.is_llama():
-            self.initial_llamas.append(item)
+        print self._things
 
     def delete (self,item):
         item.sprite().undraw()
@@ -1081,8 +1101,22 @@ class Screen (object):
             self._map_elts[key].move(dx*TILE_SIZE,dy*TILE_SIZE)
         for thing in self._things:
             # Move Things as well so they appear to not move
-            if not thing.is_player():
+            # if not thing.is_player():
+            #     # print thing
+            #     thing.shift(dx*TILE_SIZE,dy*TILE_SIZE)
+
+
+
+            if not thing.is_player() and not thing.is_fake_thing():
                 thing.shift(dx*TILE_SIZE,dy*TILE_SIZE)
+                if thing.is_fake_thing():
+                    thing.raise_or_lower_sprite()            
+            
+
+
+
+            # elif not thing.is_player() and thing.is_fake_thing():
+            #     thing.raise_or_lower_sprite()
 
    
 
@@ -1216,7 +1250,6 @@ def sign (x):
 # changes
 #
 
-
 def play_level_0 (window):
     level = Level(0)
     log ("level created")
@@ -1231,7 +1264,6 @@ def play_level_0 (window):
     log ("screen created")
 
     Door("a dry, wooden door with no doorknob").materialize(scr,11,10)
-    BarricadeDoor("the front door of the llamas' spikey fortress").materialize(scr,40,44)
     Felix("Help!").materialize(scr,12,9)
 
     l1x,l1y = (39,43)
@@ -1239,16 +1271,11 @@ def play_level_0 (window):
     l = Llama('Left',0,1,l1x,l1y).register(q, 100).materialize(scr,l1x,l1y)
     ll = Llama('Left',2,5,l2x,l2y).register(q, 100).materialize(scr,l2x,l2y)
 
-    # LLAMAS[l] = True
-    # LLAMAS[ll] = True
-
     create_panel(window)
 
     p.materialize(scr,px,py)
 
     q.enqueue(1,CheckInput(window,p))
-
-    # print scr._things
 
     while True:
         # Grab the next event from the queue if it's ready

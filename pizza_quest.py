@@ -450,7 +450,7 @@ class Spitball (Projectile):
 class Door (Thing):
     def __init__ (self,description):
         Thing.__init__(self,'Door',description)
-        pic = 'pizza.gif'#'V_door.gif'
+        pic = 'V_door.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         self._flammable = True
 
@@ -466,7 +466,7 @@ class BarricadeDoor(Thing):
 class Pizza (Thing):
     def __init__ (self,description):
         Thing.__init__(self,"Pizza Slice",description)
-        pic = 'pizza.gif'
+        pic = 'bigger_pizza.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
     def is_pizza (self):
@@ -480,7 +480,7 @@ class Pizza (Thing):
 class Felix (Thing):
     def __init__ (self,description):
         Thing.__init__(self,"Felix",description)
-        pic = 'felix.gif'
+        pic = 'other_felix.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
 

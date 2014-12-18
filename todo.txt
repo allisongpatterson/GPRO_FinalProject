@@ -1,5 +1,33 @@
 TODO:
 
+green:
+    complete level 0
+        dead llama detection -- done 12/18
+        vortex
+        fix sidepanel graphics issues -- done 12/18
+        player health indicator - JK
+        taking pizza thing
+
+
+yellow:
+    next level
+        leveling up of player
+        new design
+        situational inventory
+
+
+
+red:
+    complete inventory
+    more than 2 levels
+
+
+
+
+
+
+
+
 1 level
     background tiles -- done 12/15
     foreground objects -- done 12/15

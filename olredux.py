@@ -211,29 +211,6 @@ class Thing (Root):
     def is_burnt (self):
         return self._burnt
 
-class BurntTile (Thing):
-    def __init__ (self, level, index, player):
-        Thing.__init__(self,index)
-        self._level = level
-        self._index = index
-        px = 
-        self._x = 
-        self._walkable = True
-        the_map = lvl.LEVELS[num]
-        self._map = the_map
-
-    def _pos (self,x,y):
-        return x + (y*LEVEL_WIDTH);
-
-    # return the tile at a given tile position in the level
-    def tile (self,x,y):
-        return self._map[self._pos(x,y)]
-
-    def ind_to_pos (self, ind):
-        x = ind % LEVEL_WIDTH
-        y = (ind - x) / LEVEL_WIDTH
-        return (x*TILE_SIZE,y*TILE_SIZE)
-
 class Projectile (Thing):
     def __init__ (self, facing, mrange, power):
         Thing.__init__(self,'Projectile','A projectile')

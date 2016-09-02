@@ -1,15 +1,15 @@
-SPRITES =  {'c1' : '1_corner.gif',
-			'c2' : '2_corner.gif',
-			'c3' : '3_corner.gif',
-			'c4' : '4_corner.gif',
-			'hw' : 'H_wall.gif',
-			'vw' : 'V_wall.gif',
-			'hb' : 'H_barricade.gif', 
-			'vb' : 'V_barricade.gif',
-			'bu' : 'bush.gif',
-			'tr' : 'tree.gif',
-			'fl' : 'smaller_flower.gif',
-			'pa' : 'path.gif'
+SPRITES =  {'c1' : 'sprites/1_corner.gif',
+			'c2' : 'sprites/2_corner.gif',
+			'c3' : 'sprites/3_corner.gif',
+			'c4' : 'sprites/4_corner.gif',
+			'hw' : 'sprites/H_wall.gif',
+			'vw' : 'sprites/V_wall.gif',
+			'hb' : 'sprites/H_barricade.gif', 
+			'vb' : 'sprites/V_barricade.gif',
+			'bu' : 'sprites/bush.gif',
+			'tr' : 'sprites/tree.gif',
+			'fl' : 'sprites/smaller_flower.gif',
+			'pa' : 'sprites/path.gif'
 			}
 
 UNWALKABLES = ['c1','c2','c3','c4','hw','vw','bu','hb','vb','tr']

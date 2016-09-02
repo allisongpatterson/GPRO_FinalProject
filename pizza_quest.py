@@ -201,7 +201,7 @@ class Thing (Root):
         
 
         # Change sprite to ash pile
-        pic = 'ash.gif'
+        pic = 'sprites/ash.gif'
         self._sprite.undraw()
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         p = self._screen._player
@@ -337,8 +337,8 @@ class Projectile (Thing):
 class Fireball (Projectile):
     def __init__ (self, facing, mrange, power):
         Projectile.__init__(self, facing, mrange, power)
-        imgs = [{'Left': 'W_fireball.gif','Right': 'E_fireball.gif','Up' : 'N_fireball.gif','Down' : 'S_fireball.gif'},
-            {'Left': 'W_big_fireball.gif','Right': 'E_big_fireball.gif','Up' : 'N_big_fireball.gif','Down' : 'S_big_fireball.gif'}
+        imgs = [{'Left': 'sprites/W_fireball.gif','Right': 'sprites/E_fireball.gif','Up' : 'sprites/N_fireball.gif','Down' : 'sprites/S_fireball.gif'},
+            {'Left': 'sprites/W_big_fireball.gif','Right': 'sprites/E_big_fireball.gif','Up' : 'sprites/N_big_fireball.gif','Down' : 'sprites/S_big_fireball.gif'}
         ]
         self._DIR_IMGS = imgs[power]
         self._facing = facing
@@ -360,7 +360,7 @@ class Fireball (Projectile):
             elif o_tile in lvl.FLAMMABLES:
                 elt = self._screen.tile_object(self._x,self._y)
                 elt.undraw()
-                pic = 'ash.gif'
+                pic = 'sprites/ash.gif'
                 elt = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
                 elt.move((self._x-(self._screen._player._x-(VIEWPORT_WIDTH-1)/2))*TILE_SIZE,
                          (self._y-(self._screen._player._y-(VIEWPORT_HEIGHT-1)/2))*TILE_SIZE)
@@ -379,8 +379,8 @@ class Fireball (Projectile):
 class Spitball (Projectile):
     def __init__ (self, facing, mrange, power):
         Projectile.__init__(self, facing, mrange, power)
-        imgs = [{'Left': 'W_spit.gif','Right': 'E_spit.gif','Up' : 'N_spit.gif','Down' : 'S_spit.gif'},
-            {'Left': 'W_spit.gif','Right': 'E_spit.gif','Up' : 'N_spit.gif','Down' : 'S_spit.gif'}
+        imgs = [{'Left': 'sprites/W_spit.gif','Right': 'sprites/E_spit.gif','Up' : 'sprites/N_spit.gif','Down' : 'sprites/S_spit.gif'},
+            {'Left': 'sprites/W_spit.gif','Right': 'sprites/E_spit.gif','Up' : 'sprites/N_spit.gif','Down' : 'sprites/S_spit.gif'}
         ]
         self._DIR_IMGS = imgs[power]
         self._facing = facing
@@ -456,14 +456,14 @@ class Spitball (Projectile):
 class Door (Thing):
     def __init__ (self,description):
         Thing.__init__(self,'Door',description)
-        pic = 'V_door.gif'
+        pic = 'sprites/V_door.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
         self._flammable = True
 
 class BarricadeDoor(Thing):
     def __init__ (self,description):
         Thing.__init__(self,"Barricade Door",description)
-        pic = 'V_barricade.gif'
+        pic = 'sprites/V_barricade.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
     def is_barricade_door (self):
@@ -472,7 +472,7 @@ class BarricadeDoor(Thing):
 class Pizza (Thing):
     def __init__ (self,description):
         Thing.__init__(self,"Pizza Slice",description)
-        pic = 'bigger_pizza.gif'
+        pic = 'sprites/bigger_pizza.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
     def is_pizza (self):
@@ -482,10 +482,10 @@ class Vortex (Thing):
     def __init__ (self):
         Thing.__init__(self,"Vortex",'Where does it lead?')
         self._IMGS = {
-            0: '1_vortex.gif',
-            1: '2_vortex.gif',
-            2: '3_vortex.gif',
-            3: '4_vortex.gif'
+            0: 'sprites/1_vortex.gif',
+            1: 'sprites/2_vortex.gif',
+            2: 'sprites/3_vortex.gif',
+            3: 'sprites/4_vortex.gif'
         }
         self._state = 0;
         pic = self._IMGS[0]
@@ -524,7 +524,7 @@ class Vortex (Thing):
 class Felix (Thing):
     def __init__ (self,description):
         Thing.__init__(self,"Felix",description)
-        pic = 'other_felix.gif'
+        pic = 'sprites/other_felix.gif'
         self._sprite = Image(Point(TILE_SIZE/2,TILE_SIZE/2),pic)
 
 
@@ -599,10 +599,10 @@ class Llama (Character):
         self._fb_speed = 15
         self._wander_range = 7
         self._DIR_IMGS = {
-            'Left': 'W_llama.gif',
-            'Right': 'E_llama.gif',
-            'Up' : 'N_llama.gif',
-            'Down' : 'S_llama.gif'
+            'Left': 'sprites/W_llama.gif',
+            'Right': 'sprites/E_llama.gif',
+            'Up' : 'sprites/N_llama.gif',
+            'Down' : 'sprites/S_llama.gif'
         }
         self._facing = facing
         pic = self._DIR_IMGS[self._facing]
@@ -819,10 +819,10 @@ class Player (Character):
         log("Player.__init__ for "+str(self))
 
         self._DIR_IMGS = {
-            'Left': 'W_smaller_duck.gif',
-            'Right': 'E_smaller_duck.gif',
-            'Up' : 'N_smaller_duck.gif',
-            'Down' : 'S_smaller_duck.gif'
+            'Left': 'sprites/W_smaller_duck.gif',
+            'Right': 'sprites/E_smaller_duck.gif',
+            'Up' : 'sprites/N_smaller_duck.gif',
+            'Down' : 'sprites/S_smaller_duck.gif'
         }
         self._facing = facing
         pic = self._DIR_IMGS[self._facing]
